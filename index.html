@@ -797,9 +797,7 @@ $('applyStripLength').addEventListener('click', applyStripLength);
 $('remainderMode').addEventListener('change', applyStripLength);
 
 $('applyRainbow').addEventListener('click', () => {
-  const count = segments.length;
-
-  if (count === 0) {
+  if (segments.length === 0) {
     alert('Add at least one segment first.');
     return;
   }
