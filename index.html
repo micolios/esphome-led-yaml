@@ -501,7 +501,7 @@ $('addSegment').addEventListener('click', () => {
   render();
 });
 
-$('divideEvenly').addEventListener('click', () => {
+function divideEvenly() {
   const length = Math.max(1, +$('segmentLength').value || 1);
   const divisions = Math.max(1, +$('segmentDivisions').value || 1);
   const remainderMode = $('remainderMode').value;
@@ -527,10 +527,9 @@ $('divideEvenly').addEventListener('click', () => {
   } else {
     let index = 0;
 
-    while (remainder > 0) {
+    for (let i = 0; i < remainder; i++) {
       counts[index % divisions]++;
       index += 2;
-      remainder--;
     }
   }
 
@@ -547,7 +546,11 @@ $('divideEvenly').addEventListener('click', () => {
 
   renderSegments();
   render();
-});
+}
+
+$('divideEvenly').addEventListener('click', divideEvenly);
+
+$('remainderMode').addEventListener('change', divideEvenly);
 
 $('applyRainbow').addEventListener('click', () => {
   const count = segments.length;
