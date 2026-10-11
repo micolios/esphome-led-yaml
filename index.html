@@ -487,6 +487,15 @@ $('divideEvenly').addEventListener('click', () => {
   const length = Math.max(1, +$('segmentLength').value || 1);
   const divisions = Math.max(1, +$('segmentDivisions').value || 1);
 
+  if (divisions > length) {
+    alert(
+      `Cannot divide a ${length}-LED strip into ${divisions} segments.\n` +
+      `Each segment needs at least one LED.`
+    );
+
+    return;
+  }
+
   const baseSize = Math.floor(length / divisions);
   const remainder = length % divisions;
 
