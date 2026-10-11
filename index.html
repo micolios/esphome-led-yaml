@@ -69,7 +69,8 @@
 
       <div class="row" style="margin-top:8px">
         <button id="addSegment">Add segment</button>
-        <button id="resetSegments">Reset to rainbow</button>
+        <button id="resetSegments">Reset to default</button>
+        <button id="applyRainbow">Apply rainbow</button>
         <span class="hint">Each segment is a consecutive run of LEDs with one colour.</span>
       </div>
     </div>
@@ -135,6 +136,16 @@ let colours = [];
 let selected = new Set();
 
 let segments = [];
+
+const defaultSegments = [
+  { count: 1, colour: '#ff0000' },
+  { count: 1, colour: '#ff7f00' },
+  { count: 1, colour: '#ffff00' },
+  { count: 1, colour: '#00ff00' },
+  { count: 1, colour: '#00ffff' },
+  { count: 1, colour: '#0000ff' },
+  { count: 1, colour: '#8b00ff' }
+];
 
 function addRainbowSegments(count = 7) {
   segments = [];
@@ -485,12 +496,17 @@ $('addSegment').addEventListener('click', () => {
 
 $('divideEvenly').addEventListener('click', () => {
   const length = Math.max(1, +$('segmentLength').value || 1);
-  const divisions = Math.max(1, +$('segmentDivisions').value || 1);
+  const divisions = segments.length;
+
+  if (divisions === 0) {
+    alert('Add at least one segment first.');
+    return;
+  }
 
   if (divisions > length) {
     alert(
       `Cannot divide a ${length}-LED strip into ${divisions} segments.\n` +
-      `Each segment needs at least one LED.`
+      'Each segment needs at least one LED.'
     );
 
     return;
@@ -499,23 +515,34 @@ $('divideEvenly').addEventListener('click', () => {
   const baseSize = Math.floor(length / divisions);
   const remainder = length % divisions;
 
-  segments = [];
+  segments.forEach((segment, index) => {
+    segment.count = baseSize + (index < remainder ? 1 : 0);
+  });
 
-  for (let i = 0; i < divisions; i++) {
-    const hue = Math.round((i / divisions) * 360);
+  renderSegments();
+  render();
+});
 
-    segments.push({
-      count: baseSize + (i < remainder ? 1 : 0),
-      colour: hslToHex(hue, 100, 50)
-    });
+$('applyRainbow').addEventListener('click', () => {
+  const count = segments.length;
+
+  if (count === 0) {
+    alert('Add at least one segment first.');
+    return;
   }
+
+  segments.forEach((segment, index) => {
+    const hue = Math.round((index / count) * 360);
+    segment.colour = hslToHex(hue, 100, 50);
+  });
 
   renderSegments();
   render();
 });
 
 $('resetSegments').addEventListener('click', () => {
-  addRainbowSegments(7);
+  segments = defaultSegments.map(segment => ({ ...segment }));
+
   renderSegments();
   render();
 });
