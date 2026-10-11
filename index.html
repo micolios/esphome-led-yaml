@@ -362,6 +362,7 @@ function render() {
   $('segmentControls').style.display = segmentMode ? '' : 'none';
   $('gridControls').style.display = mode === 'grid' ? '' : 'none';
   $('lengthWrap').style.display = mode === 'single' ? '' : 'none';
+  $('directionWrap').style.display = mode === 'grid' ? 'none' : '';
   $('colourControls').style.display = segmentMode ? 'none' : '';
 
   ensureColours();
