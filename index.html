@@ -46,32 +46,27 @@
     padding-bottom: 4px;
   }
   .led {
-  aspect-ratio: 1;
-  min-width: 32px;
-  min-height: 32px;
-  border-radius: 4px;
-  background: #20262e;
-  border: 1px solid #333c47;
-  cursor: pointer;
-  position: relative;
-  user-select: none;
-  container-type: size;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    border-radius: 4px;
+    background: #20262e;
+    border: 1px solid #333c47;
+    cursor: pointer;
+    position: relative;
+    user-select: none;
   }
   .led.selected {outline: 3px solid #ffffff; outline-offset: -3px; }
   .led span {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: clamp(9px, 2.5vw, 13px);
-  font-weight: 600;
-  overflow: hidden;
-  }
-  @container (max-width: 30px) {
-    .led span {
-      display: none;
-    }
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    overflow: hidden;
+    pointer-events: none;
   }
   #output {
   width: 100%;
@@ -93,13 +88,15 @@
   font-size: 12px;
   }
   #grid.scroll-mode {
-    display: grid;
+    display: flex;
+    flex-wrap: nowrap;
     overflow-x: auto;
+    overflow-y: hidden;
   }
   
   #grid.wrap-mode {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(32px, 1fr));
     overflow-x: hidden;
   }
   
@@ -458,14 +455,17 @@ function render() {
   if (mode !== 'grid' && isRightToLeft()) {
     map = [...map].reverse();
   }
-  const columns = mode === 'grid'
-    ? +$('cols').value
-    : Math.min(total(), 30);
-
+  
   const grid = $('grid');
-  grid.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;
   grid.innerHTML = '';
-
+  
+  if (mode === 'grid') {
+    const columns = +$('cols').value;
+    grid.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;
+  } else {
+    grid.style.gridTemplateColumns = '';
+  }
+  
   map.forEach((stripIndex, cell) => {
     const led = document.createElement('div');
     led.className = 'led' + (selected.has(cell) ? ' selected' : '');
@@ -478,7 +478,7 @@ function render() {
     led.innerHTML = `<span style="color: ${textColour};">${stripIndex}</span>`;
     grid.append(led);
   });
-
+  
   generate();
 }
 
@@ -889,9 +889,13 @@ function applyStripLength() {
 
 let ledLayout = 'scroll';
 
+let ledLayout = 'scroll';
+
 function updateLedLayout() {
   const grid = $('grid');
   const button = $('toggleLayout');
+
+  grid.style.gridTemplateColumns = '';
 
   if (ledLayout === 'scroll') {
     grid.classList.add('scroll-mode');
