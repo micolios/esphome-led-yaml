@@ -81,6 +81,12 @@
       <label id="lengthWrap">Total LEDs
         <input id="length" type="number" min="1" max="2000" value="10">
       </label>
+      <label id="directionWrap">Strip direction
+        <select id="stripDirection">
+          <option value="ltr">Left to right</option>
+          <option value="rtl">Right to left</option>
+        </select>
+      </label>
     </div>
 
     <div id="segmentControls" style="display:none">
@@ -148,9 +154,13 @@
 
     <div id="colourControls">
       <h2 style="margin-top:18px">Colour</h2>
+    
       <div class="row">
         <input id="picker" type="color" value="#ff0000">
         <input id="hex" value="#ff0000" size="8">
+      </div>
+    
+      <div class="row" style="margin-top: 10px;">
         <button id="apply">Apply to selection</button>
         <button id="applyAll">Apply to all</button>
         <button id="selectAll">Select all</button>
@@ -215,31 +225,6 @@ const defaultSegments = [
   { count: 1, colour: '#0000ff' },
   { count: 1, colour: '#8b00ff' }
 ];
-
-function addRainbowSegments(count = 7) {
-  segments = [];
-
-  for (let i = 0; i < count; i++) {
-    const hue = Math.round((i / count) * 360);
-    segments.push({
-      count: 1,
-      colour: hslToHex(hue, 100, 50)
-    });
-  }
-}
-
-function hslToHex(h, s, l) {
-  s /= 100;
-  l /= 100;
-
-  const k = n => (n + h / 30) % 12;
-  const a = s * Math.min(l, 1 - l);
-  const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
-
-  const toHex = x => Math.round(255 * x).toString(16).padStart(2, '0');
-
-  return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
-}
 
 function total() {
   if ($('mode').value === 'segments') {
@@ -329,6 +314,10 @@ function displayMap() {
   return output;
 }
 
+function isRightToLeft() {
+  return $('stripDirection').value === 'rtl';
+}
+
 function renderSegments() {
   const container = $('segments');
   container.innerHTML = '';
@@ -376,13 +365,29 @@ function render() {
   $('colourControls').style.display = segmentMode ? 'none' : '';
 
   ensureColours();
-  syncSegmentColours();
+  
+  if (segmentMode && isRightToLeft()) {
+    const reversedSegments = [...segments].reverse();
+    let index = 0;
+  
+    reversedSegments.forEach(segment => {
+      for (let i = 0; i < segment.count; i++) {
+        colours[index++] = segment.colour;
+      }
+    });
+  } else {
+    syncSegmentColours();
+  }
 
   if (segmentMode) {
   $('segmentLength').value = total();
   }
 
-  const map = displayMap();
+  let map = displayMap();
+  
+  if (mode !== 'grid' && isRightToLeft()) {
+    map = [...map].reverse();
+  }
   const columns = mode === 'grid'
     ? +$('cols').value
     : Math.min(total(), 30);
@@ -417,13 +422,17 @@ function generate() {
 
   if (mode === 'segments') {
     let start = 0;
-
-    body = segments
+  
+    const orderedSegments = isRightToLeft()
+      ? [...segments].reverse()
+      : segments;
+  
+    body = orderedSegments
       .filter(segment => segment.count > 0)
       .map(segment => {
         const end = start + segment.count;
         const line = `${indent}it.range(${start}, ${end}) = Color(${hexToRgb(segment.colour).join(', ')}); // LEDs ${start}–${end - 1}`;
-
+  
         start = end;
         return line;
       })
@@ -445,6 +454,7 @@ function generate() {
     `# generator-start: ${$('start').value}`,
     `# generator-divisions: ${$('segmentDivisions').value}`,
     `# generator-remainder: ${$('remainderMode').value}`,
+    `# generator-strip-direction: ${$('stripDirection').value}`,
     `# generator-colours: ${colours.join(',')}`,
     `# generator-segments: ${segments
       .map(segment => `${segment.count}:${segment.colour}`)
@@ -486,6 +496,7 @@ function importYaml(text) {
   $('start').value = metadata.start || 'tl';
   $('segmentDivisions').value = metadata.divisions || 7;
   $('remainderMode').value = metadata.remainder || 'earliest';
+  $('stripDirection').value = metadata['strip-direction'] || 'ltr';
 
   colours = metadata.colours
     ? metadata.colours.split(',')
@@ -616,7 +627,11 @@ $('apply').addEventListener('click', () => applyColour(false));
 $('applyAll').addEventListener('click', () => applyColour(true));
 
 $('selectAll').addEventListener('click', () => {
-  const map = displayMap();
+  let map = displayMap();
+
+  if ($('mode').value !== 'grid' && isRightToLeft()) {
+    map = [...map].reverse();
+  }
 
   selected = new Set(map.map((_, index) => index));
 
@@ -815,6 +830,8 @@ $('copy').addEventListener('click', async () => {
   $('copy').textContent = 'Copied';
   setTimeout(() => $('copy').textContent = 'Copy YAML', 1200);
 });
+
+$('stripDirection').addEventListener('change', render);
 
 segments = defaultSegments.map(segment => ({ ...segment }));
   
