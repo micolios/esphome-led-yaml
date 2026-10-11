@@ -397,16 +397,13 @@ function render() {
   grid.innerHTML = '';
 
   map.forEach((stripIndex, cell) => {
-    const colourIndex = mode === 'grid' ? cell : stripIndex;
-    const isSelected = selected.has(colourIndex);
-  
     const led = document.createElement('div');
-    led.className = 'led' + (isSelected ? ' selected' : '');
-    led.style.background = colours[colourIndex];
-    led.dataset.visual = colourIndex;
-    led.title = `Strip LED ${stripIndex}\n${colours[colourIndex]}`;
+    led.className = 'led' + (selected.has(cell) ? ' selected' : '');
+    led.style.background = colours[cell];
+    led.dataset.visual = cell;
+    led.title = `Display position ${cell}\nStrip LED ${stripIndex}\n${colours[cell]}`;
   
-    const textColour = getContrastingTextColour(colours[colourIndex]);
+    const textColour = getContrastingTextColour(colours[cell]);
   
     led.innerHTML = `<span style="color: ${textColour};">${stripIndex}</span>`;
     grid.append(led);
@@ -637,11 +634,7 @@ $('selectAll').addEventListener('click', () => {
     map = [...map].reverse();
   }
 
-  const selection = mode => mode === 'grid'
-    ? map.map((_, index) => index)
-    : map;
-
-  selected = new Set(selection($('mode').value));
+  selected = new Set(map.map((_, index) => index));
 
   render();
 });
