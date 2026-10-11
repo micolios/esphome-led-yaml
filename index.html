@@ -60,7 +60,14 @@
         <label>Divisions
           <input id="segmentDivisions" type="number" min="1" max="200" value="7">
         </label>
-
+        
+        <label>Extra LEDs
+          <select id="remainderMode">
+            <option value="earliest">Earliest segments</option>
+            <option value="alternating">Every other segment</option>
+          </select>
+        </label>
+        
         <button id="divideEvenly">Divide evenly</button>
       </div>
 
@@ -497,6 +504,7 @@ $('addSegment').addEventListener('click', () => {
 $('divideEvenly').addEventListener('click', () => {
   const length = Math.max(1, +$('segmentLength').value || 1);
   const divisions = Math.max(1, +$('segmentDivisions').value || 1);
+  const remainderMode = $('remainderMode').value;
 
   if (divisions > length) {
     alert(
@@ -510,20 +518,32 @@ $('divideEvenly').addEventListener('click', () => {
   const baseSize = Math.floor(length / divisions);
   const remainder = length % divisions;
 
-  const newSegments = [];
+  const counts = new Array(divisions).fill(baseSize);
 
-  for (let index = 0; index < divisions; index++) {
+  if (remainderMode === 'earliest') {
+    for (let i = 0; i < remainder; i++) {
+      counts[i]++;
+    }
+  } else {
+    let index = 0;
+
+    while (remainder > 0) {
+      counts[index % divisions]++;
+      index += 2;
+      remainder--;
+    }
+  }
+
+  segments = counts.map((count, index) => {
     const existingColour = segments[index]
       ? segments[index].colour
       : defaultSegments[index % defaultSegments.length].colour;
 
-    newSegments.push({
-      count: baseSize + (index < remainder ? 1 : 0),
+    return {
+      count,
       colour: existingColour
-    });
-  }
-
-  segments = newSegments;
+    };
+  });
 
   renderSegments();
   render();
@@ -547,6 +567,8 @@ $('applyRainbow').addEventListener('click', () => {
 
 $('resetSegments').addEventListener('click', () => {
   segments = defaultSegments.map(segment => ({ ...segment }));
+
+  $('segmentDivisions').value = defaultSegments.length;
 
   renderSegments();
   render();
