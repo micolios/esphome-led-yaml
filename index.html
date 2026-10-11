@@ -532,8 +532,7 @@ $('applyRainbow').addEventListener('click', () => {
   }
 
   segments.forEach((segment, index) => {
-    const hue = Math.round((index / count) * 360);
-    segment.colour = hslToHex(hue, 100, 50);
+    segment.colour = defaultSegments[index % defaultSegments.length].colour;
   });
 
   renderSegments();
@@ -553,7 +552,8 @@ $('copy').addEventListener('click', async () => {
   setTimeout(() => $('copy').textContent = 'Copy YAML', 1200);
 });
 
-addRainbowSegments(7);
+segments = defaultSegments.map(segment => ({ ...segment }));
+  
 renderSegments();
 render();
 </script>
