@@ -101,6 +101,13 @@
     width: 100%;
     overflow-x: hidden;
   }
+  #grid.grid-mode {
+    display: grid;
+    overflow-x: auto;
+    overflow-y: hidden;
+    width: max-content;
+    max-width: 100%;
+  }
   
 </style>
 </head>
@@ -458,11 +465,23 @@ function render() {
   const grid = $('grid');
   grid.innerHTML = '';
   
+  $('toggleLayout').parentElement.style.display =
+    mode === 'grid' ? 'none' : '';
+  
   if (mode === 'grid') {
     const columns = +$('cols').value;
-    grid.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;
+  
+    grid.classList.add('grid-mode');
+    grid.classList.remove('scroll-mode');
+    grid.classList.remove('wrap-mode');
+  
+    grid.style.gridTemplateColumns =
+      `repeat(${columns}, minmax(32px, 1fr))`;
   } else {
+    grid.classList.remove('grid-mode');
     grid.style.gridTemplateColumns = '';
+  
+    updateLedLayout();
   }
   
   map.forEach((stripIndex, cell) => {
