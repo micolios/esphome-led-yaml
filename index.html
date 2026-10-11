@@ -496,12 +496,7 @@ $('addSegment').addEventListener('click', () => {
 
 $('divideEvenly').addEventListener('click', () => {
   const length = Math.max(1, +$('segmentLength').value || 1);
-  const divisions = segments.length;
-
-  if (divisions === 0) {
-    alert('Add at least one segment first.');
-    return;
-  }
+  const divisions = Math.max(1, +$('segmentDivisions').value || 1);
 
   if (divisions > length) {
     alert(
@@ -515,9 +510,20 @@ $('divideEvenly').addEventListener('click', () => {
   const baseSize = Math.floor(length / divisions);
   const remainder = length % divisions;
 
-  segments.forEach((segment, index) => {
-    segment.count = baseSize + (index < remainder ? 1 : 0);
-  });
+  const newSegments = [];
+
+  for (let index = 0; index < divisions; index++) {
+    const existingColour = segments[index]
+      ? segments[index].colour
+      : defaultSegments[index % defaultSegments.length].colour;
+
+    newSegments.push({
+      count: baseSize + (index < remainder ? 1 : 0),
+      colour: existingColour
+    });
+  }
+
+  segments = newSegments;
 
   renderSegments();
   render();
