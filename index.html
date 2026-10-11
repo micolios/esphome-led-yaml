@@ -38,10 +38,41 @@
   .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
   .segments { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
   .segment { display:flex; gap:8px; align-items:center; background:#0f1216; border:1px solid var(--line); border-radius:8px; padding:8px; }
-  #grid { display:grid; gap:4px; margin-top:12px; user-select:none; touch-action:none; }
-  .led { aspect-ratio:1; border-radius:4px; background:#20262e; border:1px solid #333c47; cursor:pointer; position:relative; user-select:none; }
+  #grid {
+    gap: 4px;
+    margin-top: 12px;
+    user-select: none;
+    touch-action: none;
+    padding-bottom: 4px;
+  }
+  .led {
+  aspect-ratio: 1;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 4px;
+  background: #20262e;
+  border: 1px solid #333c47;
+  cursor: pointer;
+  position: relative;
+  user-select: none;
+  container-type: size;
+  }
   .led.selected {outline: 3px solid #ffffff; outline-offset: -3px; }
-  .led span {position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
+  .led span {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(9px, 2.5vw, 13px);
+  font-weight: 600;
+  overflow: hidden;
+  }
+  @container (max-width: 30px) {
+    .led span {
+      display: none;
+    }
+  }
   #output {
   width: 100%;
   min-width: 100%;
@@ -60,6 +91,20 @@
   white-space: pre;
   font-family: ui-monospace, Consolas, monospace;
   font-size: 12px;
+  }
+  #grid.scroll-mode {
+    display: grid;
+    overflow-x: auto;
+  }
+  
+  #grid.wrap-mode {
+    display: flex;
+    flex-wrap: wrap;
+    overflow-x: hidden;
+  }
+  
+  #grid.wrap-mode .led {
+    flex: 0 0 auto;
   }
 </style>
 </head>
@@ -184,6 +229,10 @@
       </div>
     </div>
 
+    <div class="row" style="margin-top: 12px;">
+      <button id="toggleLayout">Wrap LEDs</button>
+    </div>
+    
     <div id="grid"></div>
   </section>
 
@@ -838,6 +887,28 @@ function applyStripLength() {
   render();
 }
 
+let ledLayout = 'scroll';
+
+function updateLedLayout() {
+  const grid = $('grid');
+  const button = $('toggleLayout');
+
+  if (ledLayout === 'scroll') {
+    grid.classList.add('scroll-mode');
+    grid.classList.remove('wrap-mode');
+    button.textContent = 'Wrap LEDs';
+  } else {
+    grid.classList.add('wrap-mode');
+    grid.classList.remove('scroll-mode');
+    button.textContent = 'Scroll horizontally';
+  }
+}
+
+$('toggleLayout').addEventListener('click', () => {
+  ledLayout = ledLayout === 'scroll' ? 'wrap' : 'scroll';
+  updateLedLayout();
+});
+
 $('divideEvenly').addEventListener('click', divideEvenly);
 
 $('applyStripLength').addEventListener('click', applyStripLength);
@@ -921,7 +992,8 @@ $('copy').addEventListener('click', async () => {
 $('stripDirection').addEventListener('change', render);
 
 segments = defaultSegments.map(segment => ({ ...segment }));
-  
+
+updateLedLayout();
 renderSegments();
 render();
 </script>
