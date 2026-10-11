@@ -8,9 +8,24 @@
   :root { color-scheme: dark; --bg:#111418; --panel:#1a1f26; --line:#2c333d; --text:#e6e9ee; --muted:#98a2b3; --accent:#4da3ff; }
   * { box-sizing: border-box; }
   body { margin:0; font:14px/1.45 system-ui,sans-serif; background:var(--bg); color:var(--text); }
-  main { max-width:1200px; margin:auto; padding:20px; display:grid; grid-template-columns:1fr 1fr; gap:20px; }
-  @media(max-width:900px){ main { grid-template-columns:1fr; } }
-  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  main {
+    max-width: none;
+    margin: auto;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+  @media(max-width:900px){
+    main {
+      grid-template-columns: 1fr;
+    }
+  }
+  .card {
+  min-width: 0;
+  overflow-x: auto;
+  }
   h1 { font-size:20px; margin:0 0 14px; }
   h2 { font-size:15px; margin:0 0 10px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
   label { display:block; margin:10px 0 4px; color:var(--muted); }
@@ -27,9 +42,25 @@
   .led { aspect-ratio:1; border-radius:4px; background:#20262e; border:1px solid #333c47; cursor:pointer; position:relative; user-select:none; }
   .led.selected {outline: 3px solid #ffffff; outline-offset: -3px; }
   .led span {position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
-  #output { width:100%; height:420px; white-space:pre; font-family:ui-monospace,Consolas,monospace; font-size:12px; }
+  #output {
+  width: 100%;
+  min-width: 100%;
+  height: 420px;
+  resize: horizontal;
+  overflow: auto;
+  white-space: pre;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  }
   .hint { color:var(--muted); font-size:12px; margin-top:6px; }
-  #importText {width: 100%; height: 220px; white-space: pre; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+  #importText {
+  width: 100%;
+  height: 220px;
+  resize: vertical;
+  white-space: pre;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  }
 </style>
 </head>
 <body>
@@ -133,29 +164,36 @@
 
   <section class="card">
     <h2>Generated YAML</h2>
+  
     <div class="row">
       <label>Effect name <input id="effectName" value="Custom Static"></label>
       <label>Update interval <input id="interval" value="1s" size="7"></label>
+    </div>
+  
+    <div class="row" style="margin-top: 10px;">
       <button id="copy">Copy YAML</button>
       <button id="importButton">Import YAML</button>
-      <input
-        id="importFile"
-        type="file"
-        accept=".yaml,.yml,.txt"
-        style="display: none"
-      >
-      
-      <div id="importArea" style="display: none; margin-top: 10px;">
-        <label>Paste YAML here</label>
-        <textarea id="importText" rows="10" spellcheck="false"></textarea>
-      
-        <div class="row" style="margin-top: 8px;">
-          <button id="importPaste">Import pasted YAML</button>
-          <button id="cancelImport">Cancel</button>
-        </div>
+    </div>
+  
+    <textarea id="output" readonly spellcheck="false"></textarea>
+  
+    <div id="importArea" style="display: none; margin-top: 10px;">
+      <label>Paste YAML here</label>
+      <textarea id="importText" rows="10" spellcheck="false"></textarea>
+  
+      <div class="row" style="margin-top: 8px;">
+        <button id="importPaste">Import pasted YAML</button>
+        <button id="cancelImport">Cancel</button>
       </div>
     </div>
-    <textarea id="output" readonly spellcheck="false"></textarea>
+  
+    <input
+      id="importFile"
+      type="file"
+      accept=".yaml,.yml,.txt"
+      style="display: none"
+    >
+  
     <p class="hint">Paste this under an addressable light’s <code>effects:</code> section.</p>
   </section>
 </main>
