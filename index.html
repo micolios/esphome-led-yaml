@@ -438,6 +438,12 @@ function generate() {
         return line;
       })
       .join('\n');
+  } else if (mode === 'single' && isRightToLeft()) {
+    const reversedColours = [...colours].reverse();
+  
+    body = wiringMap.map((cell, stripIndex) =>
+      `${indent}it[${stripIndex}] = Color(${hexToRgb(reversedColours[stripIndex]).join(', ')}); // display position ${cell}`
+    ).join('\n');
   } else {
     body = wiringMap.map((cell, stripIndex) =>
       `${indent}it[${stripIndex}] = Color(${hexToRgb(colours[cell]).join(', ')}); // matrix cell ${cell}`
