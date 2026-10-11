@@ -121,6 +121,18 @@
         <button id="addSegment">Add segment</button>
         <button id="resetSegments">Reset to default</button>
         <button id="applyRainbow">Apply rainbow</button>
+        
+        <label>
+          Gradient start
+          <input id="gradientStart" type="color" value="#ff0000">
+        </label>
+        
+        <label>
+          Gradient end
+          <input id="gradientEnd" type="color" value="#8b00ff">
+        </label>
+        
+        <button id="applyGradient">Apply gradient</button>
         <span class="hint">Each segment is a consecutive run of LEDs with one colour.</span>
       </div>
     </div>
@@ -529,6 +541,22 @@ function hexToRgb(hex) {
   return [0, 2, 4].map(offset => parseInt(value.slice(offset, offset + 2), 16));
 }
 
+function rgbToHex(red, green, blue) {
+  const toHex = value => value.toString(16).padStart(2, '0');
+  return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
+}
+
+function interpolateColour(startHex, endHex, ratio) {
+  const [startRed, startGreen, startBlue] = hexToRgb(startHex);
+  const [endRed, endGreen, endBlue] = hexToRgb(endHex);
+
+  const red = Math.round(startRed + (endRed - startRed) * ratio);
+  const green = Math.round(startGreen + (endGreen - startGreen) * ratio);
+  const blue = Math.round(startBlue + (endBlue - startBlue) * ratio);
+
+  return rgbToHex(red, green, blue);
+}
+
 function applyColour(applyToAll) {
   const colour = $('picker').value;
   const map = displayMap();
@@ -810,6 +838,27 @@ $('applyRainbow').addEventListener('click', () => {
   });
 
   console.log('Segments after:', segments);
+
+  renderSegments();
+  render();
+});
+
+$('applyGradient').addEventListener('click', () => {
+  const count = segments.length;
+
+  if (count === 0) {
+    alert('Add at least one segment first.');
+    return;
+  }
+
+  const startColour = $('gradientStart').value;
+  const endColour = $('gradientEnd').value;
+
+  segments.forEach((segment, index) => {
+    const ratio = count === 1 ? 0 : index / (count - 1);
+
+    segment.colour = interpolateColour(startColour, endColour, ratio);
+  });
 
   renderSegments();
   render();
