@@ -65,10 +65,12 @@
           <select id="remainderMode">
             <option value="earliest">Earliest segments</option>
             <option value="alternating">Every other segment</option>
+            <option value="alternatingOffset">Every other segment, from second</option>
           </select>
         </label>
         
         <button id="divideEvenly">Divide evenly</button>
+        <button id="applyStripLength">Apply strip length</button>
       </div>
 
       <label>Segments</label>
@@ -501,6 +503,28 @@ $('addSegment').addEventListener('click', () => {
   render();
 });
 
+function distributeCounts(segmentCount, length, remainderMode) {
+  const baseSize = Math.floor(length / segmentCount);
+  const remainder = length % segmentCount;
+
+  const counts = new Array(segmentCount).fill(baseSize);
+
+  let startIndex = 0;
+
+  if (remainderMode === 'alternatingOffset') {
+    startIndex = 1;
+  }
+
+  let index = startIndex;
+
+  for (let i = 0; i < remainder; i++) {
+    counts[index % segmentCount]++;
+    index += 2;
+  }
+
+  return counts;
+}
+
 function divideEvenly() {
   const length = Math.max(1, +$('segmentLength').value || 1);
   const divisions = Math.max(1, +$('segmentDivisions').value || 1);
@@ -515,23 +539,7 @@ function divideEvenly() {
     return;
   }
 
-  const baseSize = Math.floor(length / divisions);
-  const remainder = length % divisions;
-
-  const counts = new Array(divisions).fill(baseSize);
-
-  if (remainderMode === 'earliest') {
-    for (let i = 0; i < remainder; i++) {
-      counts[i]++;
-    }
-  } else {
-    let index = 0;
-
-    for (let i = 0; i < remainder; i++) {
-      counts[index % divisions]++;
-      index += 2;
-    }
-  }
+  const counts = distributeCounts(divisions, length, remainderMode);
 
   segments = counts.map((count, index) => {
     const existingColour = segments[index]
@@ -548,7 +556,38 @@ function divideEvenly() {
   render();
 }
 
+function applyStripLength() {
+  const length = Math.max(1, +$('segmentLength').value || 1);
+  const segmentCount = segments.length;
+  const remainderMode = $('remainderMode').value;
+
+  if (segmentCount === 0) {
+    alert('Add at least one segment first.');
+    return;
+  }
+
+  if (segmentCount > length) {
+    alert(
+      `Cannot apply a ${length}-LED strip length to ${segmentCount} segments.\n` +
+      'Each segment needs at least one LED.'
+    );
+
+    return;
+  }
+
+  const counts = distributeCounts(segmentCount, length, remainderMode);
+
+  segments.forEach((segment, index) => {
+    segment.count = counts[index];
+  });
+
+  renderSegments();
+  render();
+}
+
 $('divideEvenly').addEventListener('click', divideEvenly);
+
+$('applyStripLength').addEventListener('click', applyStripLength);
 
 $('remainderMode').addEventListener('change', divideEvenly);
 
