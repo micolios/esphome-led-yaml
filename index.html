@@ -56,19 +56,22 @@
         <label>Strip length
           <input id="segmentLength" type="number" min="1" max="2000" value="21">
         </label>
-
+      
         <label>Divisions
           <input id="segmentDivisions" type="number" min="1" max="200" value="7">
         </label>
-        
+      
         <label>Extra LEDs
           <select id="remainderMode">
             <option value="earliest">Earliest segments</option>
             <option value="alternating">Every other segment</option>
             <option value="alternatingOffset">Every other segment, from second</option>
+            <option value="evenlySpaced">Evenly across strip</option>
           </select>
         </label>
-        
+      </div>
+      
+      <div class="row">
         <button id="divideEvenly">Divide evenly</button>
         <button id="applyStripLength">Apply strip length</button>
       </div>
@@ -509,17 +512,26 @@ function distributeCounts(segmentCount, length, remainderMode) {
 
   const counts = new Array(segmentCount).fill(baseSize);
 
-  let startIndex = 0;
+  if (remainderMode === 'earliest') {
+    for (let i = 0; i < remainder; i++) {
+      counts[i]++;
+    }
+  } else if (
+    remainderMode === 'alternating' ||
+    remainderMode === 'alternatingOffset'
+  ) {
+    let index = remainderMode === 'alternatingOffset' ? 1 : 0;
 
-  if (remainderMode === 'alternatingOffset') {
-    startIndex = 1;
-  }
+    for (let i = 0; i < remainder; i++) {
+      counts[index % segmentCount]++;
+      index += 2;
+    }
+  } else if (remainderMode === 'evenlySpaced') {
+    for (let i = 0; i < remainder; i++) {
+      const index = Math.floor(((i + 0.5) * segmentCount) / remainder);
 
-  let index = startIndex;
-
-  for (let i = 0; i < remainder; i++) {
-    counts[index % segmentCount]++;
-    index += 2;
+      counts[index]++;
+    }
   }
 
   return counts;
