@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-GB">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -19,13 +19,14 @@
   input[type=number] { width:100px; }
   button { cursor:pointer; background:#242b34; }
   button:hover { border-color:var(--accent); }
+  button:disabled { opacity:.45; cursor:not-allowed; }
   .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
   .segments { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
   .segment { display:flex; gap:8px; align-items:center; background:#0f1216; border:1px solid var(--line); border-radius:8px; padding:8px; }
   #grid { display:grid; gap:4px; margin-top:12px; user-select:none; touch-action:none; }
   .led { aspect-ratio:1; border-radius:4px; background:#20262e; border:1px solid #333c47; cursor:pointer; position:relative; user-select:none; }
   .led.selected { outline:2px solid var(--accent); outline-offset:1px; }
-  .led span { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:9px; color:#0009; }
+  .led span { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; color:#0009; }
   #output { width:100%; height:420px; white-space:pre; font-family:ui-monospace,Consolas,monospace; font-size:12px; }
   .hint { color:var(--muted); font-size:12px; margin-top:6px; }
 </style>
@@ -39,8 +40,8 @@
     <div class="row">
       <label>Mode
         <select id="mode">
-          <option value="single">Single string</option>
-          <option value="segments">Segmented string</option>
+          <option value="single">Single strip</option>
+          <option value="segments">Segmented strip</option>
           <option value="grid">Square / rectangle</option>
         </select>
       </label>
@@ -51,10 +52,24 @@
     </div>
 
     <div id="segmentControls" style="display:none">
+      <div class="row">
+        <label>Strip length
+          <input id="segmentLength" type="number" min="1" max="2000" value="21">
+        </label>
+
+        <label>Divisions
+          <input id="segmentDivisions" type="number" min="1" max="200" value="7">
+        </label>
+
+        <button id="divideEvenly">Divide evenly</button>
+      </div>
+
       <label>Segments</label>
       <div id="segments" class="segments"></div>
+
       <div class="row" style="margin-top:8px">
         <button id="addSegment">Add segment</button>
+        <button id="resetSegments">Reset to rainbow</button>
         <span class="hint">Each segment is a consecutive run of LEDs with one colour.</span>
       </div>
     </div>
@@ -74,7 +89,7 @@
         <label>
           <input id="serpentine" type="checkbox" checked> Serpentine / zig-zag
         </label>
-        <label>Start corner
+        <label>Starting corner
           <select id="start">
             <option value="tl">Top left</option>
             <option value="tr">Top right</option>
@@ -83,17 +98,19 @@
           </select>
         </label>
       </div>
-      <p class="hint">The number beside each LED is its physical strip index. Click or drag to select/deselect LEDs, then apply a colour.</p>
+      <p class="hint">The number in each LED is its physical strip index. Click or drag to select or deselect LEDs, then apply a colour.</p>
     </div>
 
-    <h2 style="margin-top:18px">Colour</h2>
-    <div class="row">
-      <input id="picker" type="color" value="#ff0000">
-      <input id="hex" value="#ff0000" size="8">
-      <button id="apply">Apply to selection</button>
-      <button id="applyAll">Apply to all</button>
-      <button id="clearSel">Clear selection</button>
-      <button id="resetColors">Reset all to black</button>
+    <div id="colourControls">
+      <h2 style="margin-top:18px">Colour</h2>
+      <div class="row">
+        <input id="picker" type="color" value="#ff0000">
+        <input id="hex" value="#ff0000" size="8">
+        <button id="apply">Apply to selection</button>
+        <button id="applyAll">Apply to all</button>
+        <button id="clearSel">Clear selection</button>
+        <button id="resetColors">Reset all to black</button>
+      </div>
     </div>
 
     <div id="grid"></div>
@@ -113,165 +130,189 @@
 
 <script>
 const $ = id => document.getElementById(id);
-let colors = [], selected = new Set();
-let segments = [
-  {count:1,color:'#ff0000'},
-  {count:1,color:'#ff7f00'},
-  {count:1,color:'#ffff00'},
-  {count:1,color:'#00ff00'},
-  {count:1,color:'#00ffff'},
-  {count:1,color:'#0000ff'},
-  {count:1,color:'#8b00ff'}
-];
+
+let colours = [];
+let selected = new Set();
+
+let segments = [];
+
+function addRainbowSegments(count = 7) {
+  segments = [];
+
+  for (let i = 0; i < count; i++) {
+    const hue = Math.round((i / count) * 360);
+    segments.push({
+      count: 1,
+      colour: hslToHex(hue, 100, 50)
+    });
+  }
+}
+
+function hslToHex(h, s, l) {
+  s /= 100;
+  l /= 100;
+
+  const k = n => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+
+  const toHex = x => Math.round(255 * x).toString(16).padStart(2, '0');
+
+  return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+}
 
 function total() {
   if ($('mode').value === 'segments') {
-    return segments.reduce((n,s)=>n+Math.max(0,+s.count||0),0);
+    return segments.reduce((total, segment) => total + Math.max(0, +segment.count || 0), 0);
   }
+
   if ($('mode').value === 'grid') {
-    return Math.max(0,+$('cols').value||0) * Math.max(0,+$('rows').value||0);
+    return Math.max(0, +$('cols').value || 0) * Math.max(0, +$('rows').value || 0);
   }
-  return Math.max(0,+$('length').value||0);
+
+  return Math.max(0, +$('length').value || 0);
 }
 
-function ensureColors() {
-  const n = total();
-  while (colors.length < n) colors.push('#000000');
-  colors.length = n;
+function ensureColours() {
+  const count = total();
+
+  while (colours.length < count) colours.push('#000000');
+  colours.length = count;
 }
 
-function syncSegmentColors() {
+function syncSegmentColours() {
   if ($('mode').value !== 'segments') return;
 
   let index = 0;
 
   segments.forEach(segment => {
-    const count = Math.max(1, +segment.count || 1);
+    const count = Math.max(1, +segment.count || 0);
 
     for (let i = 0; i < count; i++) {
-      colors[index++] = segment.color;
+      colours[index++] = segment.colour;
     }
   });
 }
 
-/* Physical wiring order — used for generated YAML */
+/* Physical wiring order — used to generate YAML */
 function indexMap() {
-  ensureColors();
-  const n = total();
-  const map = Array.from({length:n}, (_,i)=>i);
+  ensureColours();
+
+  const count = total();
+  const map = Array.from({ length: count }, (_, i) => i);
 
   if ($('mode').value !== 'grid') return map;
 
-  const cols = +$('cols').value;
+  const columns = +$('cols').value;
   const rows = +$('rows').value;
-  const snake = $('serpentine').checked;
-  const dir = $('snake').value;
+  const serpentine = $('serpentine').checked;
+  const direction = $('snake').value;
   const start = $('start').value;
-  const out = [];
+  const output = [];
 
-  const outer = dir === 'row' ? rows : cols;
-  const inner = dir === 'row' ? cols : rows;
+  const outer = direction === 'row' ? rows : columns;
+  const inner = direction === 'row' ? columns : rows;
 
-  for (let a=0; a<outer; a++) {
+  for (let a = 0; a < outer; a++) {
     let line = [];
-    for (let b=0; b<inner; b++) line.push(b);
-    if (snake && a % 2 === 1) line.reverse();
+
+    for (let b = 0; b < inner; b++) line.push(b);
+
+    if (serpentine && a % 2 === 1) line.reverse();
 
     for (const b of line) {
-      let r = dir === 'row' ? a : b;
-      let c = dir === 'row' ? b : a;
+      let row = direction === 'row' ? a : b;
+      let column = direction === 'row' ? b : a;
 
-      if (start.includes('b')) r = rows - 1 - r;
-      if (start.includes('r')) c = cols - 1 - c;
+      if (start.includes('b')) row = rows - 1 - row;
+      if (start.includes('r')) column = columns - 1 - column;
 
-      out.push(r * cols + c);
+      output.push(row * columns + column);
     }
   }
 
-  return out;
+  return output;
 }
 
-/* Visual matrix layout: shows which strip LED is connected to each cell */
+/* Visual matrix layout — used for the on-screen preview and selection */
 function displayMap() {
   const map = indexMap();
 
   if ($('mode').value !== 'grid') return map;
 
-  const out = new Array(map.length);
+  const output = new Array(map.length);
 
   map.forEach((cell, stripIndex) => {
-    out[cell] = stripIndex;
+    output[cell] = stripIndex;
   });
 
-  return out;
+  return output;
 }
 
 function renderSegments() {
-  $('segments').innerHTML = '';
+  const container = $('segments');
+  container.innerHTML = '';
 
-  segments.forEach((s,i)=>{
-    const d = document.createElement('div');
-    d.className = 'segment';
-    d.innerHTML = `
-      <input type="color" value="${s.color}">
-      <input type="number" min="1" value="${s.count}" style="width:80px">
+  segments.forEach((segment, index) => {
+    const row = document.createElement('div');
+    row.className = 'segment';
+
+    row.innerHTML = `
+      <input type="color" value="${segment.colour}">
+      <input type="number" min="1" value="${segment.count}" style="width:80px">
       <span>LEDs</span>
-      <button>Delete</button>
+      <button type="button">Delete</button>
     `;
 
-    const [colorInput, countInput, deleteButton] = d.children;
+    const [colourInput, countInput, deleteButton] = row.children;
 
-    colorInput.oninput = ()=> {
-      s.color = colorInput.value;
+    colourInput.addEventListener('input', () => {
+      segment.colour = colourInput.value;
       render();
-    };
+    });
 
-    countInput.oninput = ()=> {
-      s.count = Math.max(1, +countInput.value || 1);
+    countInput.addEventListener('input', () => {
+      segment.count = Math.max(1, +countInput.value || 1);
       render();
-    };
+    });
 
-    deleteButton.onclick = ()=> {
-      segments.splice(i,1);
+    deleteButton.addEventListener('click', () => {
+      segments.splice(index, 1);
       renderSegments();
       render();
-    };
+    });
 
-    $('segments').append(d);
+    container.append(row);
   });
 }
 
 function render() {
   const mode = $('mode').value;
+  const segmentMode = mode === 'segments';
 
-  $('segmentControls').style.display = mode === 'segments' ? '' : 'none';
+  $('segmentControls').style.display = segmentMode ? '' : 'none';
   $('gridControls').style.display = mode === 'grid' ? '' : 'none';
   $('lengthWrap').style.display = mode === 'single' ? '' : 'none';
+  $('colourControls').style.display = segmentMode ? 'none' : '';
 
-  const segmentsMode = mode === 'segments';
-
-  ['picker', 'hex', 'apply', 'applyAll', 'clearSel'].forEach(id => {
-    $(id).disabled = segmentsMode;
-  });
-
-  ensureColors();
-  syncSegmentColors();
+  ensureColours();
+  syncSegmentColours();
 
   const map = displayMap();
-  const cols = mode === 'grid'
+  const columns = mode === 'grid'
     ? +$('cols').value
     : Math.min(total(), 30);
 
   const grid = $('grid');
-  grid.style.gridTemplateColumns = `repeat(${cols}, minmax(0,1fr))`;
+  grid.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;
   grid.innerHTML = '';
 
   map.forEach((stripIndex, cell) => {
     const led = document.createElement('div');
     led.className = 'led' + (selected.has(cell) ? ' selected' : '');
-    led.style.background = colors[cell];
+    led.style.background = colours[cell];
     led.dataset.visual = cell;
-    led.title = `Matrix cell ${cell}\nStrip LED ${stripIndex}\n${colors[cell]}`;
+    led.title = `Matrix cell ${cell}\nStrip LED ${stripIndex}\n${colours[cell]}`;
     led.innerHTML = `<span>${stripIndex}</span>`;
     grid.append(led);
   });
@@ -283,11 +324,28 @@ function generate() {
   const wiringMap = indexMap();
   const name = ($('effectName').value || 'Custom Static').replace(/"/g, '\\"');
   const interval = $('interval').value.trim() || '1s';
-  const indent = '            '; // 12 spaces, inside lambda block
+  const indent = '            '; // 12 spaces, within the lambda block
 
-  const body = wiringMap.map((cell, stripIndex) =>
-    `${indent}it[${stripIndex}] = Color(${hexToRgb(colors[cell]).join(', ')}); // matrix cell ${cell}`
-  ).join('\n');
+  let body;
+
+  if ($('mode').value === 'segments') {
+    let start = 0;
+
+    body = segments
+      .filter(segment => segment.count > 0)
+      .map(segment => {
+        const end = start + segment.count;
+        const line = `${indent}it.range(${start}, ${end}) = Color(${hexToRgb(segment.colour).join(', ')}); // LEDs ${start}–${end - 1}`;
+
+        start = end;
+        return line;
+      })
+      .join('\n');
+  } else {
+    body = wiringMap.map((cell, stripIndex) =>
+      `${indent}it[${stripIndex}] = Color(${hexToRgb(colours[cell]).join(', ')}); // matrix cell ${cell}`
+    ).join('\n');
+  }
 
   $('output').value =
 `effects:
@@ -299,14 +357,14 @@ ${body}`;
 }
 
 function hexToRgb(hex) {
-  const m = hex.replace('#','');
-  return [0,2,4].map(i=>parseInt(m.slice(i,i+2),16));
+  const value = hex.replace('#', '');
+  return [0, 2, 4].map(offset => parseInt(value.slice(offset, offset + 2), 16));
 }
 
-function applyColor(all) {
-  const color = $('picker').value;
+function applyColour(applyToAll) {
+  const colour = $('picker').value;
   const map = displayMap();
-  const targets = all ? map.map((_, i) => i) : [...selected];
+  const targets = applyToAll ? map.map((_, index) => index) : [...selected];
 
   if (!targets.length) {
     alert('Select at least one LED first.');
@@ -314,7 +372,7 @@ function applyColor(all) {
   }
 
   targets.forEach(cell => {
-    colors[cell] = color;
+    colours[cell] = colour;
   });
 
   render();
@@ -324,8 +382,8 @@ function applyColor(all) {
 let dragging = false;
 let dragMode = null;
 
-function setLed(visual, state) {
-  state ? selected.add(visual) : selected.delete(visual);
+function setLed(cell, state) {
+  state ? selected.add(cell) : selected.delete(cell);
 }
 
 function stopDragging() {
@@ -333,30 +391,31 @@ function stopDragging() {
   dragMode = null;
 }
 
-$('grid').addEventListener('pointerdown', e => {
+$('grid').addEventListener('pointerdown', event => {
   if ($('mode').value === 'segments') return;
-  if (e.button !== 0) return;
+  if (event.button !== 0) return;
 
-  const led = e.target.closest('.led');
+  const led = event.target.closest('.led');
   if (!led) return;
 
   dragging = true;
-  const visual = +led.dataset.visual;
-  dragMode = !selected.has(visual);
+  const cell = +led.dataset.visual;
+  dragMode = !selected.has(cell);
 
-  setLed(visual, dragMode);
+  setLed(cell, dragMode);
   render();
-  e.preventDefault();
+  event.preventDefault();
 });
 
-$('grid').addEventListener('pointerover', e => {
+$('grid').addEventListener('pointerover', event => {
   if ($('mode').value === 'segments') return;
-  if (!dragging || !(e.buttons & 1)) {
+
+  if (!dragging || !(event.buttons & 1)) {
     stopDragging();
     return;
   }
 
-  const led = e.target.closest('.led');
+  const led = event.target.closest('.led');
   if (!led) return;
 
   setLed(+led.dataset.visual, dragMode);
@@ -368,60 +427,93 @@ window.addEventListener('pointercancel', stopDragging);
 window.addEventListener('blur', stopDragging);
 
 /* Controls */
-$('mode').onchange = ()=> {
+$('mode').addEventListener('change', () => {
   selected.clear();
   render();
-};
+});
 
-$('length').oninput = render;
-$('cols').oninput = render;
-$('rows').oninput = render;
-$('snake').onchange = render;
-$('serpentine').onchange = render;
-$('start').onchange = render;
-$('effectName').oninput = generate;
-$('interval').oninput = generate;
+$('length').addEventListener('input', render);
+$('cols').addEventListener('input', render);
+$('rows').addEventListener('input', render);
+$('snake').addEventListener('change', render);
+$('serpentine').addEventListener('change', render);
+$('start').addEventListener('change', render);
+$('effectName').addEventListener('input', generate);
+$('interval').addEventListener('input', generate);
 
-$('picker').oninput = ()=> $('hex').value = $('picker').value;
+$('picker').addEventListener('input', () => {
+  $('hex').value = $('picker').value;
+});
 
-$('hex').oninput = ()=> {
+$('hex').addEventListener('input', () => {
   if (/^#[0-9a-f]{6}$/i.test($('hex').value)) {
     $('picker').value = $('hex').value;
   }
-};
+});
 
-$('apply').onclick = ()=> applyColor(false);
-$('applyAll').onclick = ()=> applyColor(true);
+$('apply').addEventListener('click', () => applyColour(false));
+$('applyAll').addEventListener('click', () => applyColour(true));
 
-$('clearSel').onclick = ()=> {
+$('clearSel').addEventListener('click', () => {
   selected.clear();
   render();
-};
+});
 
-$('resetColors').onclick = ()=> {
-  if ($('mode').value === 'segments') {
-    segments.forEach(segment => segment.color = '#000000');
-    renderSegments();
-  } else {
-    colors = colors.map(()=> '#000000');
-  }
-
+$('resetColours').addEventListener('click', () => {
+  colours = colours.map(() => '#000000');
   selected.clear();
   render();
-};
+});
 
-$('addSegment').onclick = ()=> {
-  segments.push({count:1, color:$('picker').value});
+$('addSegment').addEventListener('click', () => {
+  const lastColour = segments.length
+    ? segments[segments.length - 1].colour
+    : '#ff0000';
+
+  segments.push({
+    count: 1,
+    colour: lastColour
+  });
+
   renderSegments();
   render();
-};
+});
 
-$('copy').onclick = async ()=> {
+$('divideEvenly').addEventListener('click', () => {
+  const length = Math.max(1, +$('segmentLength').value || 1);
+  const divisions = Math.max(1, +$('segmentDivisions').value || 1);
+
+  const baseSize = Math.floor(length / divisions);
+  const remainder = length % divisions;
+
+  segments = [];
+
+  for (let i = 0; i < divisions; i++) {
+    const hue = Math.round((i / divisions) * 360);
+
+    segments.push({
+      count: base + (i < remainder ? 1 : 0),
+      colour: hslToHex(hue, 100, 50)
+    });
+  }
+
+  renderSegments();
+  render();
+});
+
+$('resetSegments').addEventListener('click', () => {
+  addRainbowSegments(7);
+  renderSegments();
+  render();
+});
+
+$('copy').addEventListener('click', async () => {
   await navigator.clipboard.writeText($('output').value);
   $('copy').textContent = 'Copied';
-  setTimeout(()=>$('copy').textContent = 'Copy YAML', 1200);
-};
+  setTimeout(() => $('copy').textContent = 'Copy YAML', 1200);
+});
 
+addRainbowSegments(7);
 renderSegments();
 render();
 </script>
