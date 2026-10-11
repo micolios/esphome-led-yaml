@@ -109,7 +109,7 @@
         <button id="apply">Apply to selection</button>
         <button id="applyAll">Apply to all</button>
         <button id="clearSel">Clear selection</button>
-        <button id="resetColors">Reset all to black</button>
+        <button id="resetColours">Reset all to black</button>
       </div>
     </div>
 
@@ -297,6 +297,10 @@ function render() {
 
   ensureColours();
   syncSegmentColours();
+
+  if (segmentMode) {
+  $('segmentLength').value = total();
+  }
 
   const map = displayMap();
   const columns = mode === 'grid'
@@ -492,7 +496,7 @@ $('divideEvenly').addEventListener('click', () => {
     const hue = Math.round((i / divisions) * 360);
 
     segments.push({
-      count: base + (i < remainder ? 1 : 0),
+      count: baseSize + (i < remainder ? 1 : 0),
       colour: hslToHex(hue, 100, 50)
     });
   }
