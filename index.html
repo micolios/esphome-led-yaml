@@ -365,19 +365,7 @@ function render() {
   $('colourControls').style.display = segmentMode ? 'none' : '';
 
   ensureColours();
-  
-  if (segmentMode && isRightToLeft()) {
-    const reversedSegments = [...segments].reverse();
-    let index = 0;
-  
-    reversedSegments.forEach(segment => {
-      for (let i = 0; i < segment.count; i++) {
-        colours[index++] = segment.colour;
-      }
-    });
-  } else {
-    syncSegmentColours();
-  }
+  syncSegmentColours();
 
   if (segmentMode) {
   $('segmentLength').value = total();
