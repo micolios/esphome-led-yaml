@@ -22,8 +22,8 @@
   .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
   .segments { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
   .segment { display:flex; gap:8px; align-items:center; background:#0f1216; border:1px solid var(--line); border-radius:8px; padding:8px; }
-  #grid { display:grid; gap:4px; margin-top:12px; user-select:none; }
-  .led { aspect-ratio:1; border-radius:4px; background:#20262e; border:1px solid #333c47; cursor:pointer; position:relative; }
+  #grid { display:grid; gap:4px; margin-top:12px; user-select:none; touch-action:none; }
+  .led { aspect-ratio:1; border-radius:4px; background:#20262e; border:1px solid #333c47; cursor:pointer; position:relative; user-select:none; }
   .led.selected { outline:2px solid var(--accent); outline-offset:1px; }
   .led span { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:9px; color:#0009; }
   #output { width:100%; height:420px; white-space:pre; font-family:ui-monospace,Consolas,monospace; font-size:12px; }
@@ -83,7 +83,7 @@
           </select>
         </label>
       </div>
-      <p class="hint">The number beside each LED is its physical strip index. Click LEDs to select them, then apply a colour.</p>
+      <p class="hint">The number beside each LED is its physical strip index. Click or drag to select/deselect LEDs, then apply a colour.</p>
     </div>
 
     <h2 style="margin-top:18px">Colour</h2>
@@ -93,7 +93,7 @@
       <button id="apply">Apply to selection</button>
       <button id="applyAll">Apply to all</button>
       <button id="clearSel">Clear selection</button>
-      <button id="reset">Reset colours</button>
+      <button id="resetColors">Reset all to black</button>
     </div>
 
     <div id="grid"></div>
@@ -107,17 +107,28 @@
       <button id="copy">Copy YAML</button>
     </div>
     <textarea id="output" readonly spellcheck="false"></textarea>
-    <p class="hint">Paste this under an addressable light’s <code>effects:</code> section. ESPHome’s <code>addressable_lambda</code> gives you indexed access with <code>it[n]</code> and supports range operations such as <code>it.range(0, 50)</code>. [1]</p>
+    <p class="hint">Paste this under an addressable light’s <code>effects:</code> section.</p>
   </section>
 </main>
 
 <script>
 const $ = id => document.getElementById(id);
-let colors = [], selected = new Set(), segments = [{count:3,color:'#91cefa'},{count:2,color:'#f5a9b8'},{count:2,color:'#ffffff'},{count:2,color:'#f5a9b8'},{count:1,color:'#91cefa'}];
+let colors = [], selected = new Set();
+let segments = [
+  {count:3,color:'#91cefa'},
+  {count:2,color:'#f5a9b8'},
+  {count:2,color:'#ffffff'},
+  {count:2,color:'#f5a9b8'},
+  {count:1,color:'#91cefa'}
+];
 
 function total() {
-  if ($('mode').value === 'segments') return segments.reduce((n,s)=>n+Math.max(0,+s.count||0),0);
-  if ($('mode').value === 'grid') return Math.max(0,+$('cols').value||0) * Math.max(0,+$('rows').value||0);
+  if ($('mode').value === 'segments') {
+    return segments.reduce((n,s)=>n+Math.max(0,+s.count||0),0);
+  }
+  if ($('mode').value === 'grid') {
+    return Math.max(0,+$('cols').value||0) * Math.max(0,+$('rows').value||0);
+  }
   return Math.max(0,+$('length').value||0);
 }
 
@@ -131,11 +142,16 @@ function indexMap() {
   ensureColors();
   const n = total();
   const map = Array.from({length:n}, (_,i)=>i);
+
   if ($('mode').value !== 'grid') return map;
 
-  const cols = +$('cols').value, rows = +$('rows').value;
-  const snake = $('serpentine').checked, dir = $('snake').value, start = $('start').value;
+  const cols = +$('cols').value;
+  const rows = +$('rows').value;
+  const snake = $('serpentine').checked;
+  const dir = $('snake').value;
+  const start = $('start').value;
   const out = [];
+
   const outer = dir === 'row' ? rows : cols;
   const inner = dir === 'row' ? cols : rows;
 
@@ -147,54 +163,78 @@ function indexMap() {
     for (const b of line) {
       let r = dir === 'row' ? a : b;
       let c = dir === 'row' ? b : a;
+
       if (start.includes('b')) r = rows - 1 - r;
       if (start.includes('r')) c = cols - 1 - c;
+
       out.push(r * cols + c);
     }
   }
+
   return out;
 }
 
 function renderSegments() {
   $('segments').innerHTML = '';
+
   segments.forEach((s,i)=>{
     const d = document.createElement('div');
     d.className = 'segment';
-    d.innerHTML = `<input type="color" value="${s.color}">
+    d.innerHTML = `
+      <input type="color" value="${s.color}">
       <input type="number" min="1" value="${s.count}" style="width:80px">
-      <span>LEDs</span><button>Delete</button>`;
-    const [c,n,btn] = d.children;
-    c.oninput = ()=>{ s.color=c.value; render(); };
-    n.oninput = ()=>{ s.count=Math.max(1,+n.value||1); render(); };
-    btn.onclick = ()=>{ segments.splice(i,1); renderSegments(); render(); };
+      <span>LEDs</span>
+      <button>Delete</button>
+    `;
+
+    const [colorInput, countInput, deleteButton] = d.children;
+
+    colorInput.oninput = ()=> {
+      s.color = colorInput.value;
+      render();
+    };
+
+    countInput.oninput = ()=> {
+      s.count = Math.max(1, +countInput.value || 1);
+      render();
+    };
+
+    deleteButton.onclick = ()=> {
+      segments.splice(i,1);
+      renderSegments();
+      render();
+    };
+
     $('segments').append(d);
   });
 }
 
 function render() {
   const mode = $('mode').value;
-  $('segmentControls').style.display = mode==='segments' ? '' : 'none';
-  $('gridControls').style.display = mode==='grid' ? '' : 'none';
-  $('lengthWrap').style.display = mode==='single' ? '' : 'none';
+
+  $('segmentControls').style.display = mode === 'segments' ? '' : 'none';
+  $('gridControls').style.display = mode === 'grid' ? '' : 'none';
+  $('lengthWrap').style.display = mode === 'single' ? '' : 'none';
 
   ensureColors();
+
   const map = indexMap();
-  const cols = mode==='grid' ? +$('cols').value : Math.min(total(), 30);
-  const g = $('grid');
-  g.style.gridTemplateColumns = `repeat(${cols}, minmax(0,1fr))`;
-  g.innerHTML = '';
+  const cols = mode === 'grid'
+    ? +$('cols').value
+    : Math.min(total(), 30);
+
+  const grid = $('grid');
+  grid.style.gridTemplateColumns = `repeat(${cols}, minmax(0,1fr))`;
+  grid.innerHTML = '';
 
   map.forEach((physical, visual) => {
-    const d = document.createElement('div');
-    d.className = 'led' + (selected.has(visual) ? ' selected' : '');
-    d.style.background = colors[physical];
-    d.title = `Visual position ${visual}\nStrip index ${physical}\n${colors[physical]}`;
-    d.innerHTML = `<span>${physical}</span>`;
-    d.onclick = ()=> {
-      selected.has(visual) ? selected.delete(visual) : selected.add(visual);
-      render();
-    };
-    g.append(d);
+    const led = document.createElement('div');
+    led.className = 'led' + (selected.has(visual) ? ' selected' : '');
+    led.style.background = colors[physical];
+    led.dataset.visual = visual;
+    led.title = `Visual position ${visual}\nStrip index ${physical}\n${colors[physical]}`;
+    led.innerHTML = `<span>${physical}</span>`;
+    grid.append(led);
   });
 
   generate();
@@ -202,10 +242,12 @@ function render() {
 
 function generate() {
   const map = indexMap();
-  const name = $('effectName').value.replace(/"/g, '\\"') || 'Custom Static';
+  const name = ($('effectName').value || 'Custom Static').replace(/"/g, '\\"');
   const interval = $('interval').value.trim() || '1s';
-  let body = map.map((physical, visual) =>
-    `it[${physical}] = Color(${hexToRgb(colors[physical]).join(', ')}); // visual position ${visual}`
+  const indent = '            '; // 12 spaces, inside lambda block
+
+  const body = map.map((physical, visual) =>
+    `${indent}it[${physical}] = Color(${hexToRgb(colors[physical]).join(', ')}); // visual position ${visual}`
   ).join('\n');
 
   $('output').value =
@@ -226,12 +268,61 @@ function applyColor(all) {
   const map = indexMap();
   const color = $('picker').value;
   const targets = all ? map.map((_,i)=>i) : [...selected];
-  if (!targets.length) return alert('Select at least one LED first.');
-  targets.forEach(v => colors[map[v]] = color);
+
+  if (!targets.length) {
+    alert('Select at least one LED first.');
+    return;
+  }
+
+  targets.forEach(visual => {
+    colors[map[visual]] = color;
+  });
+
   render();
 }
 
-$('mode').onchange = ()=>{ selected.clear(); render(); };
+/* Click and drag selection */
+let dragging = false;
+let dragMode = null;
+
+function setLed(visual, state) {
+  state ? selected.add(visual) : selected.delete(visual);
+}
+
+$('grid').addEventListener('pointerdown', e => {
+  const led = e.target.closest('.led');
+  if (!led) return;
+
+  dragging = true;
+  const visual = +led.dataset.visual;
+  dragMode = !selected.has(visual);
+
+  setLed(visual, dragMode);
+  render();
+  e.preventDefault();
+});
+
+$('grid').addEventListener('pointerover', e => {
+  if (!dragging) return;
+
+  const led = e.target.closest('.led');
+  if (!led) return;
+
+  setLed(+led.dataset.visual, dragMode);
+  render();
+});
+
+window.addEventListener('pointerup', () => {
+  dragging = false;
+  dragMode = null;
+});
+
+/* Controls */
+$('mode').onchange = ()=> {
+  selected.clear();
+  render();
+};
+
 $('length').oninput = render;
 $('cols').oninput = render;
 $('rows').oninput = render;
@@ -240,14 +331,40 @@ $('serpentine').onchange = render;
 $('start').onchange = render;
 $('effectName').oninput = generate;
 $('interval').oninput = generate;
+
 $('picker').oninput = ()=> $('hex').value = $('picker').value;
-$('hex').oninput = ()=> { if (/^#[0-9a-f]{6}$/i.test($('hex').value)) $('picker').value = $('hex').value; };
+
+$('hex').oninput = ()=> {
+  if (/^#[0-9a-f]{6}$/i.test($('hex').value)) {
+    $('picker').value = $('hex').value;
+  }
+};
+
 $('apply').onclick = ()=> applyColor(false);
 $('applyAll').onclick = ()=> applyColor(true);
-$('clearSel').onclick = ()=>{ selected.clear(); render(); };
-$('reset').onclick = ()=>{ colors = []; selected.clear(); render(); };
-$('addSegment').onclick = ()=>{ segments.push({count:1,color:$('picker').value}); renderSegments(); render(); };
-$('copy').onclick = async ()=>{ await navigator.clipboard.writeText($('output').value); $('copy').textContent='Copied'; setTimeout(()=>$('copy').textContent='Copy YAML',1200); };
+
+$('clearSel').onclick = ()=> {
+  selected.clear();
+  render();
+};
+
+$('resetColors').onclick = ()=> {
+  colors = colors.map(()=> '#000000');
+  selected.clear();
+  render();
+};
+
+$('addSegment').onclick = ()=> {
+  segments.push({count:1, color:$('picker').value});
+  renderSegments();
+  render();
+};
+
+$('copy').onclick = async ()=> {
+  await navigator.clipboard.writeText($('output').value);
+  $('copy').textContent = 'Copied';
+  setTimeout(()=>$('copy').textContent = 'Copy YAML', 1200);
+};
 
 renderSegments();
 render();
