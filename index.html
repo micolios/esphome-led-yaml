@@ -136,6 +136,13 @@
       <label>Effect name <input id="effectName" value="Custom Static"></label>
       <label>Update interval <input id="interval" value="1s" size="7"></label>
       <button id="copy">Copy YAML</button>
+      <button id="importButton">Import YAML</button>
+      <input
+        id="importFile"
+        type="file"
+        accept=".yaml,.yml,.txt"
+        style="display: none"
+      >
     </div>
     <textarea id="output" readonly spellcheck="false"></textarea>
     <p class="hint">Paste this under an addressable light’s <code>effects:</code> section.</p>
@@ -354,11 +361,12 @@ function generate() {
   const wiringMap = indexMap();
   const name = ($('effectName').value || 'Custom Static').replace(/"/g, '\\"');
   const interval = $('interval').value.trim() || '1s';
-  const indent = '            '; // 12 spaces, within the lambda block
+  const indent = '            ';
+  const mode = $('mode').value;
 
   let body;
 
-  if ($('mode').value === 'segments') {
+  if (mode === 'segments') {
     let start = 0;
 
     body = segments
@@ -377,13 +385,78 @@ function generate() {
     ).join('\n');
   }
 
+  const metadata = [
+    '# ESPHome LED YAML Generator',
+    `# generator-mode: ${mode}`,
+    `# generator-length: ${$('length').value}`,
+    `# generator-cols: ${$('cols').value}`,
+    `# generator-rows: ${$('rows').value}`,
+    `# generator-direction: ${$('snake').value}`,
+    `# generator-serpentine: ${$('serpentine').checked}`,
+    `# generator-start: ${$('start').value}`,
+    `# generator-divisions: ${$('segmentDivisions').value}`,
+    `# generator-remainder: ${$('remainderMode').value}`,
+    `# generator-colours: ${colours.join(',')}`,
+    `# generator-segments: ${segments
+      .map(segment => `${segment.count}:${segment.colour}`)
+      .join(',')}`
+  ].join('\n');
+
   $('output').value =
-`effects:
+`${metadata}
+effects:
   - addressable_lambda:
       name: "${name}"
       update_interval: ${interval}
       lambda: |-
 ${body}`;
+}
+
+function importYaml(text) {
+  const metadata = {};
+
+  text.split('\n').forEach(line => {
+    const match = line.match(/^#\s*generator-([a-z-]+):\s*(.*)$/i);
+
+    if (match) {
+      metadata[match[1]] = match[2].trim();
+    }
+  });
+
+  if (!metadata.mode) {
+    alert('No generator metadata was found in this YAML file.');
+    return;
+  }
+
+  $('mode').value = metadata.mode;
+  $('length').value = metadata.length || 10;
+  $('cols').value = metadata.cols || 5;
+  $('rows').value = metadata.rows || 2;
+  $('snake').value = metadata.direction || 'row';
+  $('serpentine').checked = metadata.serpentine === 'true';
+  $('start').value = metadata.start || 'tl';
+  $('segmentDivisions').value = metadata.divisions || 7;
+  $('remainderMode').value = metadata.remainder || 'earliest';
+
+  colours = metadata.colours
+    ? metadata.colours.split(',')
+    : [];
+
+  segments = metadata.segments
+    ? metadata.segments.split(',').map(item => {
+        const [count, colour] = item.split(':');
+
+        return {
+          count: Math.max(1, +count || 1),
+          colour
+        };
+      })
+    : [];
+
+  selected.clear();
+
+  renderSegments();
+  render();
 }
 
 function getContrastingTextColour(hex) {
@@ -524,6 +597,26 @@ $('addSegment').addEventListener('click', () => {
 
   renderSegments();
   render();
+});
+
+$('importButton').addEventListener('click', () => {
+  $('importFile').click();
+});
+
+$('importFile').addEventListener('change', event => {
+  const file = event.target.files[0];
+
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.addEventListener('load', () => {
+    importYaml(reader.result);
+  });
+
+  reader.readAsText(file);
+
+  event.target.value = '';
 });
 
 function distributeCounts(segmentCount, length, remainderMode) {
