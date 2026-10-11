@@ -138,6 +138,7 @@ function ensureColors() {
   colors.length = n;
 }
 
+/* Physical wiring order — used for generated YAML */
 function indexMap() {
   ensureColors();
   const n = total();
@@ -168,6 +169,44 @@ function indexMap() {
       if (start.includes('r')) c = cols - 1 - c;
 
       out.push(r * cols + c);
+    }
+  }
+
+  return out;
+}
+
+/* Visual matrix order — used for the on-screen preview and selection */
+function displayMap() {
+  const map = indexMap();
+
+  if ($('mode').value !== 'grid') return map;
+
+  const cols = +$('cols').value;
+  const rows = +$('rows').value;
+  const dir = $('snake').value;
+  const snake = $('serpentine').checked;
+  const start = $('start').value;
+
+  const out = new Array(rows * cols);
+  const outer = dir === 'row' ? rows : cols;
+  const inner = dir === 'row' ? cols : rows;
+
+  let wiringIndex = 0;
+
+  for (let a=0; a<outer; a++) {
+    let line = [];
+    for (let b=0; b<inner; b++) line.push(b);
+
+    if (snake && a % 2 === 1) line.reverse();
+
+    for (const b of line) {
+      let r = dir === 'row' ? a : b;
+      let c = dir === 'row' ? b : a;
+
+      if (start.includes('b')) r = rows - 1 - r;
+      if (start.includes('r')) c = cols - 1 - c;
+
+      out[r * cols + c] = map[wiringIndex++];
     }
   }
 
@@ -218,7 +257,7 @@ function render() {
 
   ensureColors();
 
-  const map = indexMap();
+  const map = displayMap();
   const cols = mode === 'grid'
     ? +$('cols').value
     : Math.min(total(), 30);
@@ -232,7 +271,7 @@ function render() {
     led.className = 'led' + (selected.has(visual) ? ' selected' : '');
     led.style.background = colors[physical];
     led.dataset.visual = visual;
-    led.title = `Visual position ${visual}\nStrip index ${physical}\n${colors[physical]}`;
+    led.title = `Grid position ${visual}\nStrip index ${physical}\n${colors[physical]}`;
     led.innerHTML = `<span>${physical}</span>`;
     grid.append(led);
   });
@@ -265,7 +304,7 @@ function hexToRgb(hex) {
 }
 
 function applyColor(all) {
-  const map = indexMap();
+  const map = displayMap();
   const color = $('picker').value;
   const targets = all ? map.map((_,i)=>i) : [...selected];
 
