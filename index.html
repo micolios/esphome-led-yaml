@@ -140,6 +140,20 @@ function ensureColors() {
   colors.length = n;
 }
 
+function syncSegmentColors() {
+  if ($('mode').value !== 'segments') return;
+
+  let index = 0;
+
+  segments.forEach(segment => {
+    const count = Math.max(1, +segment.count || 1);
+
+    for (let i = 0; i < count; i++) {
+      colors[index++] = segment.color;
+    }
+  });
+}
+
 /* Physical wiring order — used for generated YAML */
 function indexMap() {
   ensureColors();
@@ -234,7 +248,14 @@ function render() {
   $('gridControls').style.display = mode === 'grid' ? '' : 'none';
   $('lengthWrap').style.display = mode === 'single' ? '' : 'none';
 
+  const segmentsMode = mode === 'segments';
+
+  ['picker', 'hex', 'apply', 'applyAll', 'clearSel'].forEach(id => {
+    $(id).disabled = segmentsMode;
+  });
+
   ensureColors();
+  syncSegmentColors();
 
   const map = displayMap();
   const cols = mode === 'grid'
@@ -313,6 +334,7 @@ function stopDragging() {
 }
 
 $('grid').addEventListener('pointerdown', e => {
+  if ($('mode').value === 'segments') return;
   if (e.button !== 0) return;
 
   const led = e.target.closest('.led');
@@ -328,6 +350,7 @@ $('grid').addEventListener('pointerdown', e => {
 });
 
 $('grid').addEventListener('pointerover', e => {
+  if ($('mode').value === 'segments') return;
   if (!dragging || !(e.buttons & 1)) {
     stopDragging();
     return;
@@ -376,7 +399,13 @@ $('clearSel').onclick = ()=> {
 };
 
 $('resetColors').onclick = ()=> {
-  colors = colors.map(()=> '#000000');
+  if ($('mode').value === 'segments') {
+    segments.forEach(segment => segment.color = '#000000');
+    renderSegments();
+  } else {
+    colors = colors.map(()=> '#000000');
+  }
+
   selected.clear();
   render();
 };
