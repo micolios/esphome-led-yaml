@@ -442,11 +442,11 @@ function generate() {
     const reversedColours = [...colours].reverse();
   
     body = wiringMap.map((cell, stripIndex) =>
-      `${indent}it[${stripIndex}] = Color(${hexToRgb(reversedColours[stripIndex]).join(', ')}); // display position ${cell}`
+      `${indent}it[${stripIndex}] = Color(${hexToRgb(reversedColours[stripIndex]).join(', ')}); // LED position ${cell}`
     ).join('\n');
   } else {
     body = wiringMap.map((cell, stripIndex) =>
-      `${indent}it[${stripIndex}] = Color(${hexToRgb(colours[cell]).join(', ')}); // matrix cell ${cell}`
+      `${indent}it[${stripIndex}] = Color(${hexToRgb(colours[cell]).join(', ')}); // LED position ${cell}`
     ).join('\n');
   }
 
