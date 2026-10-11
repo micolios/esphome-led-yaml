@@ -25,7 +25,7 @@
   .segment { display:flex; gap:8px; align-items:center; background:#0f1216; border:1px solid var(--line); border-radius:8px; padding:8px; }
   #grid { display:grid; gap:4px; margin-top:12px; user-select:none; touch-action:none; }
   .led { aspect-ratio:1; border-radius:4px; background:#20262e; border:1px solid #333c47; cursor:pointer; position:relative; user-select:none; }
-  .led.selected {outline: 3px solid #ffffff; outline-offset: 2px; box-shadow: 0 0 0 2px #000000, 0 0 0 4px #ffffff; }
+  .led.selected {outline: 3px solid #ffffff; outline-offset: -3px; }
   .led span { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; color:#0009; }
   #output { width:100%; height:420px; white-space:pre; font-family:ui-monospace,Consolas,monospace; font-size:12px; }
   .hint { color:var(--muted); font-size:12px; margin-top:6px; }
@@ -121,6 +121,7 @@
         <input id="hex" value="#ff0000" size="8">
         <button id="apply">Apply to selection</button>
         <button id="applyAll">Apply to all</button>
+        <button id="selectAll">Select all</button>
         <button id="clearSel">Clear selection</button>
         <button id="resetColours">Reset all to black</button>
       </div>
@@ -481,6 +482,14 @@ $('hex').addEventListener('input', () => {
 $('apply').addEventListener('click', () => applyColour(false));
 $('applyAll').addEventListener('click', () => applyColour(true));
 
+$('selectAll').addEventListener('click', () => {
+  const map = displayMap();
+
+  selected = new Set(map.map((_, index) => index));
+
+  render();
+});
+  
 $('clearSel').addEventListener('click', () => {
   selected.clear();
   render();
