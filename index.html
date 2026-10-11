@@ -115,11 +115,13 @@
 const $ = id => document.getElementById(id);
 let colors = [], selected = new Set();
 let segments = [
-  {count:3,color:'#91cefa'},
-  {count:2,color:'#f5a9b8'},
-  {count:2,color:'#ffffff'},
-  {count:2,color:'#f5a9b8'},
-  {count:1,color:'#91cefa'}
+  {count:1,color:'#ff0000'},
+  {count:1,color:'#ff7f00'},
+  {count:1,color:'#ffff00'},
+  {count:1,color:'#00ff00'},
+  {count:1,color:'#00ffff'},
+  {count:1,color:'#0000ff'},
+  {count:1,color:'#8b00ff'}
 ];
 
 function total() {
@@ -175,40 +177,17 @@ function indexMap() {
   return out;
 }
 
-/* Visual matrix order — used for the on-screen preview and selection */
+/* Visual matrix layout: shows which strip LED is connected to each cell */
 function displayMap() {
   const map = indexMap();
 
   if ($('mode').value !== 'grid') return map;
 
-  const cols = +$('cols').value;
-  const rows = +$('rows').value;
-  const dir = $('snake').value;
-  const snake = $('serpentine').checked;
-  const start = $('start').value;
+  const out = new Array(map.length);
 
-  const out = new Array(rows * cols);
-  const outer = dir === 'row' ? rows : cols;
-  const inner = dir === 'row' ? cols : rows;
-
-  let wiringIndex = 0;
-
-  for (let a=0; a<outer; a++) {
-    let line = [];
-    for (let b=0; b<inner; b++) line.push(b);
-
-    if (snake && a % 2 === 1) line.reverse();
-
-    for (const b of line) {
-      let r = dir === 'row' ? a : b;
-      let c = dir === 'row' ? b : a;
-
-      if (start.includes('b')) r = rows - 1 - r;
-      if (start.includes('r')) c = cols - 1 - c;
-
-      out[r * cols + c] = map[wiringIndex++];
-    }
-  }
+  map.forEach((cell, stripIndex) => {
+    out[cell] = stripIndex;
+  });
 
   return out;
 }
@@ -266,13 +245,13 @@ function render() {
   grid.style.gridTemplateColumns = `repeat(${cols}, minmax(0,1fr))`;
   grid.innerHTML = '';
 
-  map.forEach((physical, visual) => {
+  map.forEach((stripIndex, cell) => {
     const led = document.createElement('div');
-    led.className = 'led' + (selected.has(visual) ? ' selected' : '');
-    led.style.background = colors[physical];
-    led.dataset.visual = visual;
-    led.title = `Grid position ${visual}\nStrip index ${physical}\n${colors[physical]}`;
-    led.innerHTML = `<span>${physical}</span>`;
+    led.className = 'led' + (selected.has(cell) ? ' selected' : '');
+    led.style.background = colors[cell];
+    led.dataset.visual = cell;
+    led.title = `Matrix cell ${cell}\nStrip LED ${stripIndex}\n${colors[cell]}`;
+    led.innerHTML = `<span>${stripIndex}</span>`;
     grid.append(led);
   });
 
@@ -280,13 +259,13 @@ function render() {
 }
 
 function generate() {
-  const map = indexMap();
+  const wiringMap = indexMap();
   const name = ($('effectName').value || 'Custom Static').replace(/"/g, '\\"');
   const interval = $('interval').value.trim() || '1s';
   const indent = '            '; // 12 spaces, inside lambda block
 
-  const body = map.map((physical, visual) =>
-    `${indent}it[${physical}] = Color(${hexToRgb(colors[physical]).join(', ')}); // visual position ${visual}`
+  const body = wiringMap.map((cell, stripIndex) =>
+    `${indent}it[${stripIndex}] = Color(${hexToRgb(colors[cell]).join(', ')}); // matrix cell ${cell}`
   ).join('\n');
 
   $('output').value =
@@ -304,17 +283,17 @@ function hexToRgb(hex) {
 }
 
 function applyColor(all) {
-  const map = displayMap();
   const color = $('picker').value;
-  const targets = all ? map.map((_,i)=>i) : [...selected];
+  const map = displayMap();
+  const targets = all ? map.map((_, i) => i) : [...selected];
 
   if (!targets.length) {
     alert('Select at least one LED first.');
     return;
   }
 
-  targets.forEach(visual => {
-    colors[map[visual]] = color;
+  targets.forEach(cell => {
+    colors[cell] = color;
   });
 
   render();
