@@ -121,19 +121,22 @@
         <button id="addSegment">Add segment</button>
         <button id="resetSegments">Reset to default</button>
         <button id="applyRainbow">Apply rainbow</button>
-        
+        <span class="hint">Each segment is a consecutive run of LEDs with one colour.</span>
+      </div>
+      
+      <div class="row" style="margin-top:8px">
         <label>
           Gradient start
           <input id="gradientStart" type="color" value="#ff0000">
         </label>
-        
+      
         <label>
           Gradient end
           <input id="gradientEnd" type="color" value="#8b00ff">
         </label>
-        
+      
         <button id="applyGradient">Apply gradient</button>
-        <span class="hint">Each segment is a consecutive run of LEDs with one colour.</span>
+        <button id="applyRainbowGradient">Apply rainbow gradient</button>
       </div>
     </div>
 
@@ -858,6 +861,25 @@ $('applyGradient').addEventListener('click', () => {
     const ratio = count === 1 ? 0 : index / (count - 1);
 
     segment.colour = interpolateColour(startColour, endColour, ratio);
+  });
+
+  renderSegments();
+  render();
+});
+
+$('applyRainbowGradient').addEventListener('click', () => {
+  const count = segments.length;
+
+  if (count === 0) {
+    alert('Add at least one segment first.');
+    return;
+  }
+
+  segments.forEach((segment, index) => {
+    const ratio = count === 1 ? 0 : index / (count - 1);
+    const hue = Math.round(ratio * 270); // red through to purple
+
+    segment.colour = hslToHex(hue, 100, 50);
   });
 
   renderSegments();
