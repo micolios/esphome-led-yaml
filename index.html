@@ -289,7 +289,14 @@ function setLed(visual, state) {
   state ? selected.add(visual) : selected.delete(visual);
 }
 
+function stopDragging() {
+  dragging = false;
+  dragMode = null;
+}
+
 $('grid').addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
+
   const led = e.target.closest('.led');
   if (!led) return;
 
@@ -303,7 +310,10 @@ $('grid').addEventListener('pointerdown', e => {
 });
 
 $('grid').addEventListener('pointerover', e => {
-  if (!dragging) return;
+  if (!dragging || !(e.buttons & 1)) {
+    stopDragging();
+    return;
+  }
 
   const led = e.target.closest('.led');
   if (!led) return;
@@ -312,10 +322,9 @@ $('grid').addEventListener('pointerover', e => {
   render();
 });
 
-window.addEventListener('pointerup', () => {
-  dragging = false;
-  dragMode = null;
-});
+window.addEventListener('pointerup', stopDragging);
+window.addEventListener('pointercancel', stopDragging);
+window.addEventListener('blur', stopDragging);
 
 /* Controls */
 $('mode').onchange = ()=> {
