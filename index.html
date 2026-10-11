@@ -797,6 +797,9 @@ $('applyStripLength').addEventListener('click', applyStripLength);
 $('remainderMode').addEventListener('change', applyStripLength);
 
 $('applyRainbow').addEventListener('click', () => {
+  console.log('Apply rainbow clicked');
+  console.log('Segments before:', segments);
+
   if (segments.length === 0) {
     alert('Add at least one segment first.');
     return;
@@ -805,6 +808,8 @@ $('applyRainbow').addEventListener('click', () => {
   segments.forEach((segment, index) => {
     segment.colour = defaultSegments[index % defaultSegments.length].colour;
   });
+
+  console.log('Segments after:', segments);
 
   renderSegments();
   render();
