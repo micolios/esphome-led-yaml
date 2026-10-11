@@ -26,7 +26,7 @@
   #grid { display:grid; gap:4px; margin-top:12px; user-select:none; touch-action:none; }
   .led { aspect-ratio:1; border-radius:4px; background:#20262e; border:1px solid #333c47; cursor:pointer; position:relative; user-select:none; }
   .led.selected {outline: 3px solid #ffffff; outline-offset: -3px; }
-  .led span { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; color:#0009; }
+  .led span {position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
   #output { width:100%; height:420px; white-space:pre; font-family:ui-monospace,Consolas,monospace; font-size:12px; }
   .hint { color:var(--muted); font-size:12px; margin-top:6px; }
 </style>
@@ -341,7 +341,9 @@ function render() {
     led.style.background = colours[cell];
     led.dataset.visual = cell;
     led.title = `Matrix cell ${cell}\nStrip LED ${stripIndex}\n${colours[cell]}`;
-    led.innerHTML = `<span>${stripIndex}</span>`;
+    const textColour = getContrastingTextColour(colours[cell]);
+    
+    led.innerHTML = `<span style="color: ${textColour};">${stripIndex}</span>`;
     grid.append(led);
   });
 
@@ -382,6 +384,15 @@ function generate() {
       update_interval: ${interval}
       lambda: |-
 ${body}`;
+}
+
+function getContrastingTextColour(hex) {
+  const [red, green, blue] = hexToRgb(hex);
+
+  const luminance =
+    (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
+
+  return luminance > 0.5 ? '#000000' : '#ffffff';
 }
 
 function hexToRgb(hex) {
