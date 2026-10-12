@@ -107,6 +107,72 @@
     overflow-y: hidden;
     width: 100%;
   }
+#imageControls {
+  margin-top: 16px;
+}
+
+.checkLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+}
+
+#imageWorkspace {
+  margin-top: 12px;
+}
+
+#imagePreviewWrap {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+}
+
+#imagePreview {
+  display: block;
+  max-width: 100%;
+  max-height: 360px;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+#cropBox {
+  position: absolute;
+  border: 2px solid #4da3ff;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.cropHandle {
+  position: absolute;
+  background: #4da3ff;
+  pointer-events: auto;
+}
+
+.cropHandle[data-edge="left"],
+.cropHandle[data-edge="right"] {
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: ew-resize;
+}
+
+.cropHandle[data-edge="top"],
+.cropHandle[data-edge="bottom"] {
+  left: 0;
+  right: 0;
+  height: 10px;
+  cursor: ns-resize;
+}
+
+.cropHandle[data-edge="left"] { left: -5px; }
+.cropHandle[data-edge="right"] { right: -5px; }
+.cropHandle[data-edge="top"] { top: -5px; }
+.cropHandle[data-edge="bottom"] { bottom: -5px; }
   
 </style>
 </head>
@@ -213,6 +279,62 @@
       </div>
       <p class="hint">The number in each LED is its physical strip index. Click or drag to select or deselect LEDs, then apply a colour.</p>
     </div>
+
+  <div id="imageControls" style="display:none">
+    <h2 style="margin-top:18px">Image</h2>
+  
+    <div class="row">
+      <input id="imageFile" type="file" accept="image/*">
+    </div>
+  
+    <div class="row" style="margin-top:10px">
+      <label>
+        Resize mode
+        <select id="imageFit">
+          <option value="contain">Fit with black bars</option>
+          <option value="stretch">Stretch to grid</option>
+        </select>
+      </label>
+  
+      <label class="checkLabel">
+        <input id="imageCrop" type="checkbox">
+        Crop image
+      </label>
+  
+      <button id="applyImage" disabled>Apply image to grid</button>
+    </div>
+  
+    <div class="row" style="margin-top:10px">
+      <label>
+        Grid width
+        <input id="imageCols" type="number" min="1" max="200" value="16">
+      </label>
+  
+      <label>
+        Grid height
+        <input id="imageRows" type="number" min="1" max="200" value="16">
+      </label>
+  
+      <button id="useImageSize" disabled>Create grid from image</button>
+    </div>
+  
+    <div id="imageWorkspace">
+      <div id="imagePreviewWrap">
+        <img id="imagePreview" alt="Selected image">
+        <div id="cropBox" style="display:none">
+          <div class="cropHandle" data-edge="left"></div>
+          <div class="cropHandle" data-edge="right"></div>
+          <div class="cropHandle" data-edge="top"></div>
+          <div class="cropHandle" data-edge="bottom"></div>
+        </div>
+      </div>
+  
+      <p class="hint">
+        Drag the edges to crop. The cropped area is converted to the current
+        grid size when you apply the image.
+      </p>
+    </div>
+  </div>
 
     <div id="colourControls">
       <h2 style="margin-top:18px">Colour</h2>
@@ -447,7 +569,8 @@ function render() {
   $('lengthWrap').style.display = mode === 'single' ? '' : 'none';
   $('directionWrap').style.display = mode === 'grid' ? 'none' : '';
   $('colourControls').style.display = segmentMode ? 'none' : '';
-
+  
+  updateImageControls();
   ensureColours();
   syncSegmentColours();
 
@@ -922,6 +1045,203 @@ function updateLedLayout() {
     button.textContent = 'Scroll horizontally';
   }
 }
+
+let imageElement = null;
+let crop = { left: 0, top: 0, right: 1, bottom: 1 };
+
+function updateImageControls() {
+  const gridMode = $('mode').value === 'grid';
+  const hasImage = Boolean(imageElement);
+
+  $('imageControls').style.display = gridMode ? '' : 'none';
+  $('applyImage').disabled = !hasImage;
+  $('useImageSize').disabled = !hasImage;
+
+  $('cropBox').style.display =
+    gridMode && hasImage && $('imageCrop').checked ? '' : 'none';
+
+  if (hasImage) {
+    updateCropBox();
+  }
+}
+
+function updateCropBox() {
+  if (!imageElement) return;
+
+  const box = $('cropBox');
+  const wrap = $('imagePreviewWrap');
+
+  const left = crop.left * 100;
+  const top = crop.top * 100;
+  const width = (crop.right - crop.left) * 100;
+  const height = (crop.bottom - crop.top) * 100;
+
+  box.style.left = `${left}%`;
+  box.style.top = `${top}%`;
+  box.style.width = `${width}%`;
+  box.style.height = `${height}%`;
+
+  // Keep the crop overlay aligned with the displayed image.
+  box.style.position = 'absolute';
+  box.style.inset = 'auto';
+}
+
+$('imageFile').addEventListener('change', event => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const url = URL.createObjectURL(file);
+  const image = new Image();
+
+  image.onload = () => {
+    imageElement = image;
+
+    $('imagePreview').src = url;
+
+    crop = { left: 0, top: 0, right: 1, bottom: 1 };
+
+    $('imageCols').value = Math.min(200, image.naturalWidth);
+    $('imageRows').value = Math.min(200, image.naturalHeight);
+
+    updateImageControls();
+  };
+
+  image.src = url;
+  event.target.value = '';
+});
+
+$('useImageSize').addEventListener('click', () => {
+  if (!imageElement) return;
+
+  $('cols').value = Math.min(200, imageElement.naturalWidth);
+  $('rows').value = Math.min(200, imageElement.naturalHeight);
+
+  selected.clear();
+  render();
+});
+
+let cropDrag = null;
+
+$('cropBox').addEventListener('pointerdown', event => {
+  const handle = event.target.closest('.cropHandle');
+  if (!handle) return;
+
+  cropDrag = {
+    edge: handle.dataset.edge,
+    startX: event.clientX,
+    startY: event.clientY,
+    startCrop: { ...crop }
+  };
+
+  event.preventDefault();
+});
+
+window.addEventListener('pointermove', event => {
+  if (!cropDrag || !imageElement) return;
+
+  const wrap = $('imagePreviewWrap');
+  const rect = wrap.getBoundingClientRect();
+
+  const dx = (event.clientX - cropDrag.startX) / rect.width;
+  const dy = (event.clientY - cropDrag.startY) / rect.height;
+
+  const next = { ...cropDrag.startCrop };
+
+  if (cropDrag.edge === 'left') {
+    next.left = Math.min(cropDrag.startCrop.right - 0.02,
+      Math.max(0, cropDrag.startCrop.left + dx));
+  }
+
+  if (cropDrag.edge === 'right') {
+    next.right = Math.max(cropDrag.startCrop.left + 0.02,
+      Math.min(1, cropDrag.startCrop.right + dx));
+  }
+
+  if (cropDrag.edge === 'top') {
+    next.top = Math.min(cropDrag.startCrop.bottom - 0.02,
+      Math.max(0, cropDrag.startCrop.top + dy));
+  }
+
+  if (cropDrag.edge === 'bottom') {
+    next.bottom = Math.max(cropDrag.startCrop.top + 0.02,
+      Math.min(1, cropDrag.startCrop.bottom + dy));
+  }
+
+  crop = next;
+  updateCropBox();
+});
+
+window.addEventListener('pointerup', () => {
+  cropDrag = null;
+});
+
+$('imageCrop').addEventListener('change', updateImageControls);
+
+$('applyImage').addEventListener('click', () => {
+  if (!imageElement) return;
+
+  const cols = Math.max(1, +$('cols').value || 1);
+  const rows = Math.max(1, +$('rows').value || 1);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = cols;
+  canvas.height = rows;
+
+  const context = canvas.getContext('2d');
+  context.fillStyle = '#000000';
+  context.fillRect(0, 0, cols, rows);
+
+  const sourceX = crop.left * imageElement.naturalWidth;
+  const sourceY = crop.top * imageElement.naturalHeight;
+  const sourceWidth = (crop.right - crop.left) * imageElement.naturalWidth;
+  const sourceHeight = (crop.bottom - crop.top) * imageElement.naturalHeight;
+
+  const fitMode = $('imageFit').value;
+
+  if (fitMode === 'stretch') {
+    context.drawImage(
+      imageElement,
+      sourceX, sourceY, sourceWidth, sourceHeight,
+      0, 0, cols, rows
+    );
+  } else {
+    const scale = Math.min(
+      cols / sourceWidth,
+      rows / sourceHeight
+    );
+
+    const drawWidth = sourceWidth * scale;
+    const drawHeight = sourceHeight * scale;
+
+    const offsetX = (cols - drawWidth) / 2;
+    const offsetY = (rows - drawHeight) / 2;
+
+    context.drawImage(
+      imageElement,
+      sourceX, sourceY, sourceWidth, sourceHeight,
+      offsetX, offsetY, drawWidth, drawHeight
+    );
+  }
+
+  const data = context.getImageData(0, 0, cols, rows).data;
+
+  colours = new Array(cols * rows).fill('#000000');
+  selected.clear();
+
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const index = (y * cols + x) * 4;
+
+      const red = data[index];
+      const green = data[index + 1];
+      const blue = data[index + 2];
+
+      colours[y * cols + x] = rgbToHex(red, green, blue);
+    }
+  }
+
+  render();
+});
 
 $('toggleLayout').addEventListener('click', () => {
   ledLayout = ledLayout === 'scroll' ? 'wrap' : 'scroll';
