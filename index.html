@@ -57,6 +57,7 @@
   .led {
     flex: 1 1 0;
     min-width: 32px;
+    max-width: 64px;
     aspect-ratio: 1;
     border-radius: 4px;
     background: #20262e;
@@ -440,7 +441,7 @@
 <script>
 const $ = id => document.getElementById(id);
 
-const APP_VERSION = '1.5.2';
+const APP_VERSION = '1.5.3';
 
 let colours = [];
 let selected = new Set();
