@@ -127,6 +127,15 @@
   #grid.grid-mode .led {
     justify-self: center;
   }
+
+  #grid.fixed-size .led {
+    flex: 0 0 auto;
+    width: var(--led-size, 64px);
+    height: var(--led-size, 64px);
+    max-width: none;
+    aspect-ratio: auto;
+  }
+  
   #imageControls {
     margin-top: 16px;
   }
@@ -403,6 +412,11 @@
   <section class="card previewCard">
     <div class="row" style="margin-bottom: 10px;">
       <button id="toggleLayout">Wrap LEDs</button>
+
+      <label class="checkLabel" id="keepSizeWrap">
+        <input id="keepLedSize" type="checkbox">
+        Keep LED size
+      </label>
     </div>
   
     <div id="grid"></div>
@@ -451,7 +465,7 @@
 <script>
 const $ = id => document.getElementById(id);
 
-const APP_VERSION = '1.5.4';
+const APP_VERSION = '1.6.1';
 
 let colours = [];
 let selected = new Set();
@@ -1138,6 +1152,8 @@ function updateLedLayout() {
     grid.classList.remove('scroll-mode');
     button.textContent = 'Scroll horizontally';
   }
+
+  $('keepSizeWrap').style.display = '';
 }
 
 function updateWrapSize(ledCount) {
@@ -1147,12 +1163,22 @@ function updateWrapSize(ledCount) {
   const width = grid.clientWidth;
   const count = Math.max(1, ledCount);
 
-  let size = Math.floor((width - (count - 1) * gap) / count);
+  const keepSize = $('keepLedSize').checked;
 
-  if (size < 32) {
+  grid.classList.toggle('fixed-size', keepSize);
+
+  let size;
+
+  if (keepSize) {
     size = 64;
   } else {
-    size = Math.min(64, size);
+    size = Math.floor((width - (count - 1) * gap) / count);
+
+    if (size < 32) {
+      size = 32;
+    } else {
+      size = Math.min(64, size);
+    }
   }
 
   grid.style.setProperty('--led-size', `${size}px`);
@@ -1422,6 +1448,8 @@ $('copy').addEventListener('click', async () => {
 });
 
 $('stripDirection').addEventListener('change', render);
+
+$('keepLedSize').addEventListener('change', render);
 
 $('clearSegments').addEventListener('click', () => {
   segments = [];
