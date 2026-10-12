@@ -173,6 +173,25 @@
 .cropHandle[data-edge="right"] { right: -5px; }
 .cropHandle[data-edge="top"] { top: -5px; }
 .cropHandle[data-edge="bottom"] { bottom: -5px; }
+
+.appFooter {
+  grid-column: 1 / -1;
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.appFooter span {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.previewCard {
+  grid-column: 1 / -1;
+}
   
 </style>
 </head>
@@ -232,6 +251,7 @@
 
       <div class="row" style="margin-top:8px">
         <button id="addSegment">Add segment</button>
+        <button id="clearSegments">Clear all segments</button>
         <button id="resetSegments">Reset to default</button>
         <button id="applyRainbow">Apply rainbow</button>
         <span class="hint">Each segment is a consecutive run of LEDs with one colour.</span>
@@ -255,8 +275,12 @@
 
     <div id="gridControls" style="display:none">
       <div class="row">
-        <label>Width <input id="cols" type="number" min="1" max="200" value="5"></label>
-        <label>Height <input id="rows" type="number" min="1" max="200" value="2"></label>
+        <label>Width <input id="cols" type="number" min="1" max="64" value="5"></label>
+        <label>Height <input id="rows" type="number" min="1" max="64" value="2"></label>
+        <label class="checkLabel">
+          <input id="allowLargeGrid" type="checkbox">
+          Allow larger grids
+        </label>
       </div>
       <div class="row">
         <label>Data direction
@@ -280,62 +304,48 @@
       <p class="hint">The number in each LED is its physical strip index. Click or drag to select or deselect LEDs, then apply a colour.</p>
     </div>
 
-  <div id="imageControls" style="display:none">
-    <h2 style="margin-top:18px">Image</h2>
-  
-    <div class="row">
-      <input id="imageFile" type="file" accept="image/*">
-    </div>
-  
-    <div class="row" style="margin-top:10px">
-      <label>
-        Resize mode
-        <select id="imageFit">
-          <option value="contain">Fit with black bars</option>
-          <option value="stretch">Stretch to grid</option>
-        </select>
-      </label>
-  
-      <label class="checkLabel">
-        <input id="imageCrop" type="checkbox">
-        Crop image
-      </label>
-  
-      <button id="applyImage" disabled>Apply image to grid</button>
-    </div>
-  
-    <div class="row" style="margin-top:10px">
-      <label>
-        Grid width
-        <input id="imageCols" type="number" min="1" max="200" value="16">
-      </label>
-  
-      <label>
-        Grid height
-        <input id="imageRows" type="number" min="1" max="200" value="16">
-      </label>
-  
-      <button id="useImageSize" disabled>Create grid from image</button>
-    </div>
-  
-    <div id="imageWorkspace">
-      <div id="imagePreviewWrap">
-        <img id="imagePreview" alt="Selected image">
-        <div id="cropBox" style="display:none">
-          <div class="cropHandle" data-edge="left"></div>
-          <div class="cropHandle" data-edge="right"></div>
-          <div class="cropHandle" data-edge="top"></div>
-          <div class="cropHandle" data-edge="bottom"></div>
-        </div>
+    <div id="imageControls" style="display:none">
+      <h2 style="margin-top:18px">Image</h2>
+    
+      <div class="row">
+        <input id="imageFile" type="file" accept="image/*">
       </div>
-  
-      <p class="hint">
-        Drag the edges to crop. The cropped area is converted to the current
-        grid size when you apply the image.
-      </p>
+    
+      <div class="row" style="margin-top:10px">
+        <label>
+          Resize mode
+          <select id="imageFit">
+            <option value="contain">Fit with black bars</option>
+            <option value="stretch">Stretch to grid</option>
+          </select>
+        </label>
+    
+        <label class="checkLabel">
+          <input id="imageCrop" type="checkbox">
+          Crop image
+        </label>
+    
+        <button id="applyImage" disabled>Apply image to existing grid</button>
+      </div>
+    
+      <div id="imageWorkspace">
+        <div id="imagePreviewWrap">
+          <img id="imagePreview" alt="Selected image">
+          <div id="cropBox" style="display:none">
+            <div class="cropHandle" data-edge="left"></div>
+            <div class="cropHandle" data-edge="right"></div>
+            <div class="cropHandle" data-edge="top"></div>
+            <div class="cropHandle" data-edge="bottom"></div>
+          </div>
+        </div>
+    
+        <p class="hint">
+          Drag the blue edges to crop. The cropped area is sampled at the current
+          grid size when you apply the image.
+        </p>
+      </div>
     </div>
-  </div>
-
+    
     <div id="colourControls">
       <h2 style="margin-top:18px">Colour</h2>
     
@@ -352,14 +362,16 @@
         <button id="resetColours">Reset all to black</button>
       </div>
     </div>
-
-    <div class="row" style="margin-top: 12px;">
-      <button id="toggleLayout">Wrap LEDs</button>
-    </div>
-    
-    <div id="grid"></div>
   </section>
 
+  <section class="card previewCard">
+    <div class="row" style="margin-bottom: 10px;">
+      <button id="toggleLayout">Wrap LEDs</button>
+    </div>
+  
+    <div id="grid"></div>
+  </section>
+  
   <section class="card">
     <h2>Generated YAML</h2>
   
@@ -394,10 +406,16 @@
   
     <p class="hint">Paste this under an addressable light’s <code>effects:</code> section.</p>
   </section>
+  <footer class="appFooter">
+    ESPHome Addressable LED YAML Generator
+    <span id="version"></span>
+  </footer>
 </main>
 
 <script>
 const $ = id => document.getElementById(id);
+
+const APP_VERSION = '1.5.0';
 
 let colours = [];
 let selected = new Set();
@@ -414,6 +432,26 @@ const defaultSegments = [
   { count: 1, colour: '#8b00ff' }
 ];
 
+
+function updateGridLimits() {
+  const max = $('allowLargeGrid').checked ? 200 : 64;
+
+  $('cols').max = max;
+  $('rows').max = max;
+}
+
+$('allowLargeGrid').addEventListener('change', () => {
+  updateGridLimits();
+
+  if (!$('allowLargeGrid').checked) {
+    $('cols').value = Math.min(64, +$('cols').value || 1);
+    $('rows').value = Math.min(64, +$('rows').value || 1);
+    render();
+  }
+});
+
+updateGridLimits();
+  
 function hslToHex(h, s, l) {
   s /= 100;
   l /= 100;
@@ -1069,21 +1107,11 @@ function updateCropBox() {
   if (!imageElement) return;
 
   const box = $('cropBox');
-  const wrap = $('imagePreviewWrap');
 
-  const left = crop.left * 100;
-  const top = crop.top * 100;
-  const width = (crop.right - crop.left) * 100;
-  const height = (crop.bottom - crop.top) * 100;
-
-  box.style.left = `${left}%`;
-  box.style.top = `${top}%`;
-  box.style.width = `${width}%`;
-  box.style.height = `${height}%`;
-
-  // Keep the crop overlay aligned with the displayed image.
-  box.style.position = 'absolute';
-  box.style.inset = 'auto';
+  box.style.left = `${crop.left * 100}%`;
+  box.style.top = `${crop.top * 100}%`;
+  box.style.width = `${(crop.right - crop.left) * 100}%`;
+  box.style.height = `${(crop.bottom - crop.top) * 100}%`;
 }
 
 $('imageFile').addEventListener('change', event => {
@@ -1099,9 +1127,6 @@ $('imageFile').addEventListener('change', event => {
     $('imagePreview').src = url;
 
     crop = { left: 0, top: 0, right: 1, bottom: 1 };
-
-    $('imageCols').value = Math.min(200, image.naturalWidth);
-    $('imageRows').value = Math.min(200, image.naturalHeight);
 
     updateImageControls();
   };
@@ -1330,11 +1355,22 @@ $('copy').addEventListener('click', async () => {
 
 $('stripDirection').addEventListener('change', render);
 
+$('clearSegments').addEventListener('click', () => {
+  segments = [];
+  selected.clear();
+
+  renderSegments();
+  render();
+});
+
 segments = defaultSegments.map(segment => ({ ...segment }));
 
 updateLedLayout();
 renderSegments();
 render();
+
+$('version').textContent = `v${APP_VERSION}`;
+  
 </script>
 </body>
 </html>
