@@ -440,7 +440,7 @@
 <script>
 const $ = id => document.getElementById(id);
 
-const APP_VERSION = '1.5.1';
+const APP_VERSION = '1.5.2';
 
 let colours = [];
 let selected = new Set();
@@ -608,8 +608,26 @@ function renderSegments() {
       render();
     });
 
+    countInput.addEventListener('keydown', event => {
+      const allowed = [
+        'Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight',
+        'ArrowUp', 'ArrowDown', 'Home', 'End'
+      ];
+    
+      if (allowed.includes(event.key)) return;
+      if (!/^[0-9]$/.test(event.key)) {
+        event.preventDefault();
+      }
+    });
+    
     countInput.addEventListener('input', () => {
-      segment.count = Math.max(1, +countInput.value || 1);
+      const parsed = parseInt(countInput.value, 10);
+      const valid = Number.isFinite(parsed) ? parsed : 1;
+      const count = Math.max(1, Math.min(2000, valid));
+    
+      segment.count = count;
+      countInput.value = count;
+    
       render();
     });
 
