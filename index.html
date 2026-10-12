@@ -108,14 +108,24 @@
   #grid.wrap-mode {
     display: flex;
     flex-wrap: wrap;
-    justify-content: safe center;
+    justify-content: flex-start;
     overflow-x: hidden;
+  }
+  #grid.wrap-mode .led {
+    flex: 0 0 auto;
+    width: var(--led-size, 64px);
+    height: var(--led-size, 64px);
+    max-width: none;
+    aspect-ratio: auto;
   }
   #grid.grid-mode {
     display: grid;
     overflow-x: auto;
     overflow-y: hidden;
     width: 100%;
+  }
+  #grid.grid-mode .led {
+    justify-self: center;
   }
   #imageControls {
     margin-top: 16px;
@@ -441,7 +451,7 @@
 <script>
 const $ = id => document.getElementById(id);
 
-const APP_VERSION = '1.5.3';
+const APP_VERSION = '1.5.4';
 
 let colours = [];
 let selected = new Set();
@@ -668,6 +678,8 @@ function render() {
   
   const grid = $('grid');
   grid.innerHTML = '';
+
+  updateWrapSize(map.length);
   
   $('toggleLayout').parentElement.style.display =
     mode === 'grid' ? 'none' : '';
@@ -1128,6 +1140,24 @@ function updateLedLayout() {
   }
 }
 
+function updateWrapSize(ledCount) {
+  const grid = $('grid');
+  const gap = 4;
+
+  const width = grid.clientWidth;
+  const count = Math.max(1, ledCount);
+
+  let size = Math.floor((width - (count - 1) * gap) / count);
+
+  if (size < 32) {
+    size = 64;
+  } else {
+    size = Math.min(64, size);
+  }
+
+  grid.style.setProperty('--led-size', `${size}px`);
+}
+
 let imageElement = null;
 let crop = { left: 0, top: 0, right: 1, bottom: 1 };
 
@@ -1377,6 +1407,11 @@ $('resetSegments').addEventListener('click', () => {
   $('segmentDivisions').value = defaultSegments.length;
 
   renderSegments();
+  render();
+});
+
+window.addEventListener('resize', () => {
+  updateWrapSize(total());
   render();
 });
 
