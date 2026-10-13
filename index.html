@@ -722,22 +722,20 @@ function render() {
   
     grid.classList.toggle('fit-mode', fitPreview);
   
-    if (fitPreview) {
-      grid.style.gridTemplateColumns =
-        `repeat(${columns}, minmax(0, 1fr))`;
-    } else {
-      const availableWidth = grid.clientWidth;
-      const gridSize = Math.max(
-        32,
-        Math.min(
-          64,
-          Math.floor((availableWidth - (columns - 1) * gap) / columns)
-        )
-      );
+    const availableWidth = grid.clientWidth;
   
-      grid.style.gridTemplateColumns =
-        `repeat(${columns}, ${gridSize}px)`;
+    let gridSize = Math.floor(
+      (availableWidth - (columns - 1) * gap) / columns
+    );
+  
+    if (fitPreview) {
+      gridSize = Math.min(64, gridSize);
+    } else {
+      gridSize = Math.max(32, Math.min(64, gridSize));
     }
+  
+    grid.style.gridTemplateColumns =
+      `repeat(${columns}, ${gridSize}px)`;
   } else {
     grid.classList.remove('grid-mode');
     grid.style.gridTemplateColumns = '';
