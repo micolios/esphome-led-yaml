@@ -4,169 +4,215 @@ Create static effects for ESPHome addressable LED strips, matrices and segmented
 
 The generator runs entirely in your browser and produces ready-to-paste `addressable_lambda` YAML for ESPHome.
 
+GitHub page: [https://micolios.github.io/esphome-led-yaml/](https://micolios.github.io/esphome-led-yaml/)
+
 ## Features
 
-- Create static effects for a single addressable LED strip.
-- Choose an individual colour for every LED.
-- Create coloured segments, with an editable LED count and colour for each segment.
-- Automatically divide a strip into evenly sized coloured segments.
-- Create square or rectangular LED matrices.
-- Configure row-major or column-major data direction.
-- Support serpentine / zig-zag wiring for both rows and columns.
-- Choose the starting corner of the LED matrix.
-- Click or click-and-drag to select and deselect individual LEDs.
-- Apply a selected colour to one LED, a group of LEDs, or every LED.
-- See a live preview showing each LED’s physical strip index.
-- Generate ready-to-use ESPHome `addressable_lambda` YAML.
-- Copy the generated YAML to the clipboard with one click.
+- Single-strip, segmented-strip, and square/rectangle layouts
+- Per-LED colour selection with click and drag selection
+- Left-to-right or right-to-left strip direction
+- Selectable starting corner for the grid layout
+- Separate colours and selections for each layout mode
+- Rainbow, gradient, and custom segment colours
+- Image-to-grid conversion with crop, fit, and stretch options
+- Scrollable, wrapping, or fit-to-window LED preview
+- Adjustable LED preview size, with an optional fixed size
+- YAML import/export using embedded generator metadata
+- One-click copy to clipboard
 
 ## Modes
 
 ### Single strip
 
-Use this mode for a normal, non-segmented addressable LED strip.
+Use for a normal, non-segmented addressable LED strip.
 
 1. Select **Single strip**.
 2. Enter the total number of LEDs.
-3. Click an LED to select it, or click and drag to select several.
-4. Choose a colour and select **Apply to selection**.
-5. Copy the generated YAML into your ESPHome configuration.
+3. Select LEDs, choose a colour, then select **Apply to selection** or **Apply to all**.
+4. Copy the generated YAML into ESPHome.
 
-You can also use **Apply to all** to set every LED to the same colour.
+<details>
+<summary><strong>Features and options</strong></summary>
+
+- Enter any strip length
+- Choose left-to-right or right-to-left strip direction
+- Click or click-and-drag to select LEDs
+- Apply a colour to the selection or to every LED
+- Enter colours with the picker or a hex value such as `#91cefa`
+- Clear the selection or reset all LEDs to black
+- Preview shows each LED’s physical strip index
+
+</details>
 
 ### Segmented strip
 
-Use this mode to create repeating colour bands, flags, indicators or simple patterns.
+Use for repeating colour bands, flags, indicators, or simple patterns.
 
 1. Select **Segmented strip**.
-2. Enter the physical strip length.
-3. Enter the number of divisions you want.
-4. Select **Divide evenly**.
-5. Adjust each segment’s colour or LED count if required.
+2. Enter the physical strip length and number of divisions.
+3. Select **Divide evenly**.
+4. Adjust each segment’s colour or LED count if required.
 
-The generator automatically creates an `it.range()` instruction for each segment, keeping the generated YAML compact.
+Alternatively, add or remove segments and set their lengths individually.
 
-For example, a 21-LED strip divided into seven segments produces:
+The generator creates one compact `it.range()` instruction per segment:
 
 ```yaml
 it.range(0, 3) = Color(255, 0, 0);
 it.range(3, 6) = Color(255, 127, 0);
 it.range(6, 9) = Color(255, 255, 0);
-it.range(9, 12) = Color(0, 255, 0);
-it.range(12, 15) = Color(0, 255, 255);
-it.range(15, 18) = Color(0, 0, 255);
-it.range(18, 21) = Color(139, 0, 255);
 ```
 
-If the strip length does not divide exactly, the remaining LEDs are distributed across the earliest segments. For example, 22 LEDs divided into seven segments creates segment sizes of:
+<details>
+<summary><strong>Features and options</strong></summary>
+
+- Add, delete, and individually edit segments
+- Set each segment’s LED count and colour
+- **Apply strip length** - redistribute existing segments across a new strip length
+- **Apply rainbow** - apply the default rainbow palette
+- **Apply gradient** - blend between two chosen colours
+- **Apply rainbow gradient** - create a smooth red-to-purple rainbow
+- **Clear all segments** - remove every segment
+- **Reset to default** - restore the seven colour default layout
+- Choose left-to-right or right-to-left strip direction
+
+</details>
+
+<details>
+<summary><strong>Uneven division</strong></summary>
+
+If the strip length does not divide exactly, remaining LEDs are distributed evenly across the strip by default.
+
+For example, 23 LEDs divided into seven segments produces:
 
 ```text
-4, 3, 3, 3, 3, 3, 3
+3, 4, 3, 3, 3, 4, 3
 ```
+
+</details>
 
 ### Square / rectangle
 
-Use this mode for LED matrices, panels and grids.
+Use for LED matrices, panels, and grids.
 
-Configure:
+1. Select **Square / rectangle**.
+2. Enter the grid width and height.
+3. Configure the wiring direction, serpentine setting, and starting corner.
+4. Select LEDs and apply colours, or upload an image.
+5. Copy the generated YAML into ESPHome.
 
-- **Width** — number of LEDs across the matrix.
-- **Height** — number of LEDs down the matrix.
-- **Data direction** — whether the strip is wired row by row or column by column.
-- **Serpentine / zig-zag** — enable this if alternate rows or columns reverse direction.
-- **Starting corner** — where LED 0 is physically located.
+<details>
+<summary><strong>Features and options</strong></summary>
 
-The preview shows the physical strip index assigned to every matrix cell, making it easier to check that the wiring direction matches your actual display.
+- Configure grid width and height
+- Choose row-by-row or column-by-column data direction
+- Enable serpentine / zig-zag wiring
+- Choose the starting corner
+- Allow larger grids, up to 200 × 200
+- Click or click and drag to select LEDs
+- Apply colours to the selection or to every LED
+- Upload an image and apply its colours to the grid
+- Choose fit to window or scrollable preview
 
-For example, a 5 × 2 matrix using serpentine rows produces:
+</details>
+
+<details>
+<summary><strong>Image to grid</strong></summary>
+
+Upload an image and apply its colours to the current grid.
+
+- **Fit with black bars** - preserves aspect ratio and fills unused LEDs with black
+- **Stretch to grid** - fills every LED, ignoring the original aspect ratio
+- **Crop image** - drag the crop edges to select part of the image
+- **Apply image to existing grid** - samples the image at the current grid resolution
+
+The image is sampled once per LED, so a 16 × 16 grid produces 256 colours.
+
+Crop notes:
+
+- Crop positions are stored as percentages of the image
+- Unticking **Crop image** ignores the previous crop and uses the full image
+- The crop selection resets when cropping is disabled
+- Crop handles can be dragged from the left, right, top, and bottom edges
+
+</details>
+
+<details>
+<summary><strong>Wiring examples</strong></summary>
+
+A 5 × 2 matrix using serpentine rows:
 
 ```text
 0  1  2  3  4
 9  8  7  6  5
 ```
 
-The same matrix using serpentine columns produces:
+The same matrix using serpentine columns:
 
 ```text
 0  3  4  7  8
 1  2  5  6  9
 ```
 
-## Colour selection
+</details>
 
-For single-strip and matrix modes, you can:
+## LED preview
 
-- Click an LED to select or deselect it.
-- Click and drag to select or deselect a run of LEDs.
-- Use the colour picker or enter a hex value such as `#91cefa`.
-- Apply the chosen colour to the current selection.
-- Apply the chosen colour to every LED.
-- Clear the current selection.
-- Reset every LED to black.
+The preview shows each LED’s display position and physical strip index.
 
-The LED preview shows the physical strip index inside each LED, helping you identify the correct LED before applying a colour.
+- **Wrap LEDs / Scroll horizontally** - choose whether long strips wrap onto new rows or remain in one scrollable row
+- **Keep LED size** - keep LEDs at 64 px instead of shrinking them
+- **Fit preview to window** - grid mode only; scales the entire grid to fit the available width
+
+By default, preview LEDs range from 32 px to 64 px. In grid fit mode, they can shrink further so the full matrix remains visible; LED numbers are hidden automatically once a box becomes too small.
 
 ## Generated YAML
 
-The tool generates a complete ESPHome `effects:` block using `addressable_lambda`.
-
-For individual LEDs, it generates lines such as:
+The tool creates an ESPHome `addressable_lambda` effect.
 
 ```yaml
-it[0] = Color(91, 206, 250);
-it[1] = Color(245, 169, 184);[1]
-it[2] = Color(255, 255, 255);
+effects:
+  - addressable_lambda:
+      name: "Custom Static"
+      update_interval: 1s
+      lambda: |-
+        it[0] = Color(255, 0, 0);
 ```
 
-For segmented strips, it uses ranges:
+Paste this under the `effects:` section of an ESPHome addressable light.
 
-```yaml
-it.range(0, 3) = Color(91, 206, 250);
-it.range(3, 5) = Color(245, 169, 184);
-```
+<details>
+<summary><strong>Import and export metadata</strong></summary>
 
-Copy the generated YAML and paste it into the `effects:` section of an addressable ESPHome light configuration.
+Each generated YAML begins with `# generator-*` comments. These preserve:
 
-## Example ESPHome usage
+- Layout mode and dimensions
+- Strip direction and grid wiring options
+- Segment definitions
+- LED colours
 
-```yaml
-light:
-  - platform: neopixelbus
-    id: led_strip
-    name: "LED Strip"
-    pin: GPIO13
-    num_leds: 21
-    variant: WS2812
+Use **Import YAML** to paste a previously generated file back into the tool. Files without generator metadata cannot be imported.
 
-    effects:
-      - addressable_lambda:
-          name: "Custom Static"
-          update_interval: 1s
-          lambda: |-
-            it.range(0, 3) = Color(255, 0, 0);
-            it.range(3, 6) = Color(255, 127, 0);
-            it.range(6, 9) = Color(255, 255, 0);
-            it.range(9, 12) = Color(0, 255, 0);
-            it.range(12, 15) = Color(0, 255, 255);
-            it.range(15, 18) = Color(0, 0, 255);
-            it.range(18, 21) = Color(139, 0, 255);
-```
+</details>
 
-`update_interval: 1s` is suitable for a static effect. The lambda is executed when the effect starts and then once per update interval.
+<details>
+<summary><strong>Grid size and performance</strong></summary>
 
-## Running locally
+- Grids are limited to 64 × 64 by default
+- Enable **Allow larger grids** to permit up to 200 × 200
+- Large grids can slow down preview rendering and YAML generation
+- 64 × 64 is a practical upper limit for most devices
 
-No build step is required.
+</details>
 
-1. Download or clone this repository.
-2. Open `index.html` in a web browser.
+## Usage
 
-## ESPHome compatibility
+Visit [https://micolios.github.io/esphome-led-yaml/](https://micolios.github.io/esphome-led-yaml/)
 
-This generator is intended for ESPHome addressable lights, including:
+Or:
 
-- `neopixelbus`
-- `wled`
-- Other addressable light platforms that support `addressable_lambda`
-
-The generated YAML uses ESPHome’s `addressable_lambda` effect, `it[index]`, and `it.range(start, end)`.
+1. Open `index.html` in a browser.
+2. Choose a layout mode.
+3. Set the LED count or grid dimensions.
+4. Select LEDs and apply colours, or import an image.
+5. Copy the generated YAML into ESPHome.
