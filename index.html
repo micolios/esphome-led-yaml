@@ -334,10 +334,6 @@
           <input id="allowLargeGrid" type="checkbox">
           Allow larger grids
         </label>
-        <label class="checkLabel">
-          <input id="fitGridPreview" type="checkbox" checked>
-          Fit preview to window
-        </label>
       </div>
       <div class="row">
         <label>Data direction
@@ -429,6 +425,11 @@
         <input id="keepLedSize" type="checkbox">
         Keep LED size
       </label>
+
+      <label class="checkLabel" id="fitPreviewWrap">
+        <input id="fitGridPreview" type="checkbox" checked>
+        Fit preview to window
+      </label>
     </div>
   
     <div id="grid"></div>
@@ -477,7 +478,7 @@
 <script>
 const $ = id => document.getElementById(id);
 
-const APP_VERSION = '1.7.2';
+const APP_VERSION = '1.7.3';
 
 let colours = [];
 let selected = new Set();
@@ -709,6 +710,8 @@ function render() {
   
   $('toggleLayout').parentElement.style.display =
     mode === 'grid' ? 'none' : '';
+  $('fitPreviewWrap').style.display =
+    mode === 'grid' ? '' : 'none';
   
   if (mode === 'grid') {
     const columns = Math.max(1, +$('cols').value || 1);
