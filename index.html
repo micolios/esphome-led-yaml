@@ -129,6 +129,13 @@
   #grid.grid-mode.fit-mode {
     overflow-x: hidden;
   }
+  #grid.grid-mode.fit-mode .led {
+    min-width: 0;
+    width: 100%;
+    height: auto;
+    max-width: none;
+    aspect-ratio: 1;
+  }
   #grid.scroll-mode.fixed-size .led,
   #grid.wrap-mode.fixed-size .led {
     flex: 0 0 auto;
@@ -481,7 +488,7 @@
 <script>
 const $ = id => document.getElementById(id);
 
-const APP_VERSION = '1.8.2';
+const APP_VERSION = '1.8.3';
 
 let activeMode = 'single';
 
