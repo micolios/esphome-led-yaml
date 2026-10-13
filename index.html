@@ -126,7 +126,9 @@
     width: 100%;
     justify-content: start;
   }
-
+  #grid.grid-mode.fit-mode {
+    overflow-x: hidden;
+  }
   #grid.scroll-mode.fixed-size .led,
   #grid.wrap-mode.fixed-size .led {
     flex: 0 0 auto;
@@ -237,6 +239,12 @@
   .appFooter {
     grid-area: footer;
   }
+
+  @container (max-width: 28px) {
+    .led span {
+      display: none;
+    }
+  }
   
 </style>
 </head>
@@ -325,6 +333,10 @@
         <label class="checkLabel">
           <input id="allowLargeGrid" type="checkbox">
           Allow larger grids
+        </label>
+        <label class="checkLabel">
+          <input id="fitGridPreview" type="checkbox" checked>
+          Fit preview to window
         </label>
       </div>
       <div class="row">
@@ -465,7 +477,7 @@
 <script>
 const $ = id => document.getElementById(id);
 
-const APP_VERSION = '1.6.2';
+const APP_VERSION = '1.7.1';
 
 let colours = [];
 let selected = new Set();
@@ -700,24 +712,32 @@ function render() {
   
   if (mode === 'grid') {
     const columns = Math.max(1, +$('cols').value || 1);
+    const fitPreview = $('fitGridPreview').checked;
     const gap = 4;
-  
-    const availableWidth = grid.clientWidth;
-    const gridSize = Math.max(
-      32,
-      Math.min(
-        64,
-        Math.floor((availableWidth - (columns - 1) * gap) / columns)
-      )
-    );
   
     grid.classList.add('grid-mode');
     grid.classList.remove('scroll-mode');
     grid.classList.remove('wrap-mode');
     grid.classList.remove('fixed-size');
   
-    grid.style.gridTemplateColumns =
-      `repeat(${columns}, ${gridSize}px)`;
+    grid.classList.toggle('fit-mode', fitPreview);
+  
+    if (fitPreview) {
+      grid.style.gridTemplateColumns =
+        `repeat(${columns}, minmax(0, 1fr))`;
+    } else {
+      const availableWidth = grid.clientWidth;
+      const gridSize = Math.max(
+        32,
+        Math.min(
+          64,
+          Math.floor((availableWidth - (columns - 1) * gap) / columns)
+        )
+      );
+  
+      grid.style.gridTemplateColumns =
+        `repeat(${columns}, ${gridSize}px)`;
+    }
   } else {
     grid.classList.remove('grid-mode');
     grid.style.gridTemplateColumns = '';
@@ -1300,7 +1320,13 @@ window.addEventListener('pointerup', () => {
   cropDrag = null;
 });
 
-$('imageCrop').addEventListener('change', updateImageControls);
+$('imageCrop').addEventListener('change', () => {
+  if (!$('imageCrop').checked) {
+    crop = { left: 0, top: 0, right: 1, bottom: 1 };
+  }
+
+  updateImageControls();
+});
 
 $('applyImage').addEventListener('click', () => {
   if (!imageElement) return;
@@ -1316,10 +1342,17 @@ $('applyImage').addEventListener('click', () => {
   context.fillStyle = '#000000';
   context.fillRect(0, 0, cols, rows);
 
-  const sourceX = crop.left * imageElement.naturalWidth;
-  const sourceY = crop.top * imageElement.naturalHeight;
-  const sourceWidth = (crop.right - crop.left) * imageElement.naturalWidth;
-  const sourceHeight = (crop.bottom - crop.top) * imageElement.naturalHeight;
+  const useCrop = $('imageCrop').checked;
+  
+  const cropLeft = useCrop ? crop.left : 0;
+  const cropTop = useCrop ? crop.top : 0;
+  const cropRight = useCrop ? crop.right : 1;
+  const cropBottom = useCrop ? crop.bottom : 1;
+  
+  const sourceX = cropLeft * imageElement.naturalWidth;
+  const sourceY = cropTop * imageElement.naturalHeight;
+  const sourceWidth = (cropRight - cropLeft) * imageElement.naturalWidth;
+  const sourceHeight = (cropBottom - cropTop) * imageElement.naturalHeight;
 
   const fitMode = $('imageFit').value;
 
@@ -1461,6 +1494,8 @@ $('copy').addEventListener('click', async () => {
 $('stripDirection').addEventListener('change', render);
 
 $('keepLedSize').addEventListener('change', render);
+
+$('fitGridPreview').addEventListener('change', render);
 
 $('clearSegments').addEventListener('click', () => {
   segments = [];
