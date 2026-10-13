@@ -419,20 +419,23 @@
 
   <section class="card previewCard">
     <div class="row" style="margin-bottom: 10px;">
-      <button id="toggleLayout">Wrap LEDs</button>
-
-      <label class="checkLabel" id="keepSizeWrap">
-        <input id="keepLedSize" type="checkbox">
-        Keep LED size
-      </label>
-
+      <div class="row" id="stripLayoutControls">
+        <button id="toggleLayout">Scroll horizontally</button>
+    
+        <label class="checkLabel" id="keepSizeWrap">
+          <input id="keepLedSize" type="checkbox">
+          Keep LED size
+        </label>
+      </div>
+    
       <label class="checkLabel" id="fitPreviewWrap">
         <input id="fitGridPreview" type="checkbox" checked>
         Fit preview to window
       </label>
     </div>
-  
+    
     <div id="grid"></div>
+    
   </section>
   
   <section class="card outputCard">
@@ -478,10 +481,24 @@
 <script>
 const $ = id => document.getElementById(id);
 
-const APP_VERSION = '1.7.3';
+const APP_VERSION = '1.8.2';
 
-let colours = [];
-let selected = new Set();
+let activeMode = 'single';
+
+let coloursByMode = {
+  single: [],
+  segments: [],
+  grid: []
+};
+
+let selectedByMode = {
+  single: new Set(),
+  segments: new Set(),
+  grid: new Set()
+};
+
+let colours = coloursByMode[activeMode];
+let selected = selectedByMode[activeMode];
 
 let segments = [];
 
@@ -496,6 +513,19 @@ const defaultSegments = [
 ];
 
 
+function setActiveMode(mode) {
+  if (mode === activeMode) return;
+
+  coloursByMode[activeMode] = colours;
+  selectedByMode[activeMode] = selected;
+
+  activeMode = mode;
+  colours = coloursByMode[mode];
+  selected = selectedByMode[mode];
+
+  $('mode').value = mode;
+}
+  
 function updateGridLimits() {
   const max = $('allowLargeGrid').checked ? 200 : 64;
 
@@ -708,8 +738,9 @@ function render() {
 
   updateWrapSize(map.length);
   
-  $('toggleLayout').parentElement.style.display =
+  $('stripLayoutControls').style.display =
     mode === 'grid' ? 'none' : '';
+  
   $('fitPreviewWrap').style.display =
     mode === 'grid' ? '' : 'none';
   
@@ -855,9 +886,18 @@ function importYaml(text) {
   $('remainderMode').value = metadata.remainder || 'earliest';
   $('stripDirection').value = metadata['strip-direction'] || 'ltr';
 
-  colours = metadata.colours
+  const importedMode = metadata.mode;
+  
+  coloursByMode[importedMode] = metadata.colours
     ? metadata.colours.split(',')
     : [];
+  
+  selectedByMode[importedMode] = new Set();
+  
+  setActiveMode(importedMode);
+  
+  colours = coloursByMode[importedMode];
+  selected = selectedByMode[importedMode];
 
   segments = metadata.segments
     ? metadata.segments.split(',').map(item => {
@@ -973,7 +1013,7 @@ window.addEventListener('blur', stopDragging);
 
 /* Controls */
 $('mode').addEventListener('change', () => {
-  selected.clear();
+  setActiveMode($('mode').value);
   render();
 });
 
