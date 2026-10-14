@@ -335,8 +335,8 @@
 
     <div id="gridControls" style="display:none">
       <div class="row">
-        <label>Width <input id="cols" type="number" min="1" max="64" value="5"></label>
-        <label>Height <input id="rows" type="number" min="1" max="64" value="2"></label>
+        <label>Width <input id="cols" type="number" min="1" max="64" value="8"></label>
+        <label>Height <input id="rows" type="number" min="1" max="64" value="8"></label>
         <label class="checkLabel">
           <input id="allowLargeGrid" type="checkbox">
           Allow larger grids
@@ -884,8 +884,8 @@ function importYaml(text) {
 
   $('mode').value = metadata.mode;
   $('length').value = metadata.length || 10;
-  $('cols').value = metadata.cols || 8;
-  $('rows').value = metadata.rows || 8;
+  $('cols').value = metadata.cols || $('cols').defaultValue;
+  $('rows').value = metadata.rows || $('rows').defaultValue;
   $('snake').value = metadata.direction || 'row';
   $('serpentine').checked = metadata.serpentine === 'true';
   $('start').value = metadata.start || 'tl';
